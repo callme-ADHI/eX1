@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "eX1 HUD",
+  "version": "1.0.0",
+  "description": "Instrument-grade command-center AI companion",
+  "permissions": [
+    "storage",
+    "tabs"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "eX1 HUD",
+    "default_icon": "icon-128.png"
+  },
+  "commands": {
+    "toggle-overlay": {
+      "suggested_key": {
+        "default": "Ctrl+Space",
+        "mac": "Ctrl+Space"
+      },
+      "description": "Toggle the eX1 HUD overlay"
+    }
+  },
+  "icons": {
+    "128": "icon-128.png"
+  }
+}
