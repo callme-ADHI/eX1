@@ -8,6 +8,7 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
+        index:      resolve(__dirname, 'index.html'),
         newtab:     resolve(__dirname, 'newtab.html'),
         content:    resolve(__dirname, 'src/content/content.tsx'),
         background: resolve(__dirname, 'src/background/service-worker.ts'),
@@ -19,7 +20,10 @@ export default defineConfig({
         },
         chunkFileNames: 'chunks/[name]-[hash].js',
         assetFileNames: (info) => {
-          if (info.name?.endsWith('.css')) return '[name].[ext]';
+          if (info.name?.endsWith('.css')) {
+            if (info.name === 'main.css') return 'newtab.css';
+            return '[name].[ext]';
+          }
           return 'assets/[name]-[hash].[ext]';
         },
       },
