@@ -81,7 +81,7 @@
 /* Clock Widget - Large Centered Left Display */
 .clock-widget {
   position: absolute;
-  left: calc(25% - 75px);
+  left: calc(25% - 56px);
   top: 32%;
   transform: translate(-50%, -50%) scale(0.95);
   display: flex;
