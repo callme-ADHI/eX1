@@ -4,151 +4,135 @@ import { useStorage } from '../../hooks/useStorage';
 import { KEYS } from '../../../shared/storage';
 import { DEFAULT_AI_TOOLS } from '../../../shared/defaults';
 import type { AITool, AppSettings } from '../../../shared/types';
+import { DEFAULT_SETTINGS } from '../../../shared/defaults';
 import styles from './AIWheel.module.css';
 
-const DEFAULT_SETTINGS_PARTIAL = { edgeActivation: true } as AppSettings;
-
 export default function AIWheel() {
-  const [tools] = useStorage<AITool[]>(KEYS.AI_TOOLS, DEFAULT_AI_TOOLS);
-  const [settings] = useStorage<AppSettings>(KEYS.SETTINGS, DEFAULT_SETTINGS_PARTIAL);
-  const [isOpen, setIsOpen] = useState(false);
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const leaveTimeout = useRef<number | undefined>(undefined);
-  const hoverTimeout = useRef<number | undefined>(undefined);
+  const [tools]    = useStorage<AITool[]>(KEYS.AI_TOOLS, DEFAULT_AI_TOOLS);
+  const [settings] = useStorage<AppSettings>(KEYS.SETTINGS, DEFAULT_SETTINGS);
+  const [open, setOpen]       = useState(false);
+  const [hovered, setHovered] = useState<string | null>(null);
+  const leaveRef = useRef<number | undefined>(undefined);
+  const enterRef = useRef<number | undefined>(undefined);
 
-  const activeTools = tools
+  const active = tools
     .filter(t => t.pinned !== false)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
-  // Alt+Space toggle
+  /* keyboard toggle */
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.altKey && e.code === 'Space') { e.preventDefault(); setIsOpen(p => !p); }
+    const h = (e: KeyboardEvent) => {
+      if (e.altKey && e.code === 'Space') { e.preventDefault(); setOpen(p => !p); }
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
   }, []);
 
-  const openWheel = () => {
-    clearTimeout(hoverTimeout.current);
-    clearTimeout(leaveTimeout.current);
-    hoverTimeout.current = window.setTimeout(() => setIsOpen(true), 120);
+  const startOpen = () => {
+    clearTimeout(leaveRef.current);
+    enterRef.current = window.setTimeout(() => setOpen(true), 100);
   };
-
-  const closeWheel = () => {
-    clearTimeout(hoverTimeout.current);
-    leaveTimeout.current = window.setTimeout(() => {
-      setIsOpen(false);
-      setHoveredId(null);
-    }, 500);
+  const scheduleClose = () => {
+    clearTimeout(enterRef.current);
+    leaveRef.current = window.setTimeout(() => { setOpen(false); setHovered(null); }, 500);
   };
+  const cancelClose = () => clearTimeout(leaveRef.current);
 
-  const keepOpen = () => {
-    clearTimeout(leaveTimeout.current);
-  };
-
-  const handleNodeClick = (tool: AITool, e: React.MouseEvent) => {
+  /* navigate */
+  const go = (tool: AITool, e: React.MouseEvent) => {
     e.preventDefault();
-    if (typeof chrome !== 'undefined' && chrome.tabs) {
-      chrome.tabs.create({ url: tool.url });
+    const url = tool.url;
+    if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
+      chrome.tabs.create({ url });
     } else {
-      window.open(tool.url, '_blank');
+      window.open(url, '_blank');
     }
   };
 
-  // Distribute nodes along a right-facing semicircle
-  const N = activeTools.length;
-  const RADIUS = 195;
-  const padding = 0.3;
-  const startAngle = -Math.PI / 2 + padding;
-  const endAngle   =  Math.PI / 2 - padding;
+  /* radial math — right-facing semicircle */
+  const N = active.length;
+  const R = 200;           // radius
+  const PAD = 0.28;        // angular padding from top/bottom
+  const t0 = -Math.PI / 2 + PAD;
+  const t1 =  Math.PI / 2 - PAD;
+  // The 500×500 circle is centred at (250, 250), shifted left by 250px so only right half shows
+  const CX = 250, CY = 250;
 
   return (
     <>
-      {/* Invisible edge trigger strip */}
-      {settings.edgeActivation && (
-        <div
-          className={styles.edgeTrigger}
-          onMouseEnter={openWheel}
-          onMouseLeave={closeWheel}
-        />
+      {/* ── Invisible 8px strip on left edge ── */}
+      {settings.edgeActivation !== false && (
+        <div className={styles.edgeTrigger} onMouseEnter={startOpen} onMouseLeave={scheduleClose} />
       )}
 
       <AnimatePresence>
-        {isOpen && (
+        {open && (
           <>
-            {/* Backdrop click to close */}
+            {/* dim backdrop */}
             <motion.div
               className={styles.backdrop}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => setIsOpen(false)}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              onClick={() => setOpen(false)}
             />
 
-            {/* Semicircular panel */}
+            {/* semi-circle panel */}
             <motion.div
-              className={styles.wheelContainer}
-              initial={{ x: -360 }}
-              animate={{ x: 0 }}
-              exit={{ x: -360 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 28 }}
-              onMouseEnter={keepOpen}
-              onMouseLeave={closeWheel}
+              className={styles.panel}
+              initial={{ x: -300 }} animate={{ x: 0 }} exit={{ x: -300 }}
+              transition={{ type: 'spring', stiffness: 270, damping: 28 }}
+              onMouseEnter={cancelClose}
+              onMouseLeave={scheduleClose}
             >
-              {/* The semi-circle background */}
-              <div className={styles.semiCircle}>
-                {/* Center AI label */}
-                <button
-                  className={styles.centerNode}
-                  onClick={() => setIsOpen(false)}
-                >
+              {/* glass circle background */}
+              <div className={styles.circle}>
+
+                {/* Center AI button */}
+                <button className={styles.center} onClick={() => setOpen(false)}>
                   <span>AI</span>
                 </button>
 
-                {/* Nodes placed on the arc */}
-                {activeTools.map((tool, index) => {
-                  const angle = N > 1
-                    ? startAngle + (index / (N - 1)) * (endAngle - startAngle)
-                    : 0;
-                  const x = 250 + RADIUS * Math.cos(angle); // 250 = center of circle
-                  const y = 250 + RADIUS * Math.sin(angle);
+                {/* Arc nodes */}
+                {active.map((tool, i) => {
+                  const angle = N > 1 ? t0 + (i / (N - 1)) * (t1 - t0) : 0;
+                  const x = CX + R * Math.cos(angle);
+                  const y = CY + R * Math.sin(angle);
+                  const isHov = hovered === tool.id;
 
                   return (
                     <motion.div
                       key={tool.id}
-                      className={styles.nodeWrapper}
+                      className={styles.nodeWrap}
                       style={{ left: x, top: y }}
                       initial={{ scale: 0, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       exit={{ scale: 0, opacity: 0 }}
-                      transition={{ delay: index * 0.04, type: 'spring', stiffness: 320, damping: 24 }}
+                      transition={{ delay: i * 0.035, type: 'spring', stiffness: 340, damping: 26 }}
                     >
                       <a
                         href={tool.url}
-                        className={`${styles.node} ${hoveredId === tool.id ? styles.nodeHovered : ''}`}
-                        onClick={e => handleNodeClick(tool, e)}
-                        onMouseEnter={() => setHoveredId(tool.id)}
-                        onMouseLeave={() => setHoveredId(null)}
+                        className={`${styles.node} ${isHov ? styles.nodeHov : ''}`}
+                        onClick={e => go(tool, e)}
+                        onMouseEnter={() => setHovered(tool.id)}
+                        onMouseLeave={() => setHovered(null)}
                         title={tool.name}
                       >
                         <span
-                          className={styles.nodeIcon}
+                          className={styles.icon}
                           dangerouslySetInnerHTML={{ __html: tool.icon }}
                         />
                       </a>
                       <AnimatePresence>
-                        {hoveredId === tool.id && (
-                          <motion.div
+                        {isHov && (
+                          <motion.span
                             className={styles.label}
-                            initial={{ opacity: 0, x: -4 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -4 }}
-                            transition={{ duration: 0.15 }}
+                            initial={{ opacity: 0, y: 4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 4 }}
+                            transition={{ duration: 0.12 }}
                           >
                             {tool.name}
-                          </motion.div>
+                          </motion.span>
                         )}
                       </AnimatePresence>
                     </motion.div>

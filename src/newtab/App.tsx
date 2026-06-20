@@ -8,7 +8,7 @@ import Clock from './components/Clock/Clock';
 import AIWheel from './components/AIWheel/AIWheel';
 import SearchBar from './components/SearchBar/SearchBar';
 import Dock from './components/Dock/Dock';
-import FocusCard from './components/FocusCard/FocusCard';
+import FocusStrip from './components/FocusCard/FocusStrip';
 import ProductivityCard from './components/ProductivityCard/ProductivityCard';
 import TabIntelCard from './components/TabIntelCard/TabIntelCard';
 import SettingsPanel from './components/Settings/SettingsPanel';
@@ -24,30 +24,34 @@ export default function App() {
 
   return (
     <div className={styles.root}>
-      {/* ── Big clock left-center ─────────────────────── */}
+      {/* ── Large clock — left center ───────────── */}
       <div className={styles.clockArea}>
         <Clock settings={settings} />
       </div>
 
-      {/* ── Search bar top-right ──────────────────────── */}
+      {/* ── Focus strip — below clock ───────────── */}
+      <div className={styles.focusArea}>
+        <FocusStrip />
+      </div>
+
+      {/* ── Search bar — top right ──────────────── */}
       <div className={styles.searchArea}>
         <SearchBar />
       </div>
 
-      {/* ── Dashboard cards right panel ───────────────── */}
+      {/* ── Productivity + Tab cards — right col ── */}
       <div className={styles.cardsArea}>
-        <FocusCard />
         <ProductivityCard />
         <TabIntelCard />
       </div>
 
-      {/* ── AI Wheel edge-triggered left side ────────── */}
+      {/* ── AI Wheel — left edge triggered ─────── */}
       <AIWheel />
 
-      {/* ── Bottom Dock ───────────────────────────────── */}
+      {/* ── Dock — bottom center ────────────────── */}
       <Dock />
 
-      {/* ── Settings gear bottom-right ────────────────── */}
+      {/* ── Settings gear ───────────────────────── */}
       <div className={styles.settingsArea}>
         <SettingsPanel />
       </div>

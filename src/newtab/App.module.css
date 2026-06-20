@@ -1,4 +1,4 @@
-/* ─── Root fullscreen overlay ────────────────────────────────────────────────── */
+/* ─── Root fullscreen canvas ──────────────────────────────────────────────── */
 .root {
   width: 100vw;
   height: 100vh;
@@ -8,17 +8,18 @@
   font-family: 'Inter', -apple-system, sans-serif;
 }
 
-/* Subtle radial background vignette */
+/* Subtle radial glow from left-center */
 .root::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 80% 60% at 25% 40%, rgba(255,255,255,0.025) 0%, transparent 70%);
+  background: radial-gradient(ellipse 70% 55% at 22% 42%, rgba(255,255,255,0.03) 0%, transparent 65%);
   pointer-events: none;
   z-index: 0;
 }
 
-/* ─── Clock ── absolute positioned left-center ──────────────────────────────── */
+/* ─── LEFT COLUMN ─────────────────────────────────────────────────────────── */
+/* Clock: absolute, left 1/4, centered vertically at ~38% */
 .clockArea {
   position: absolute;
   left: 22%;
@@ -27,33 +28,43 @@
   z-index: 10;
 }
 
-/* ─── Search bar ── absolute positioned top-right ───────────────────────────── */
+/* Focus strip: sits just below the clock, same left alignment */
+.focusArea {
+  position: absolute;
+  left: calc(22% - 200px);   /* left-align with clock */
+  top: calc(38% + 110px);   /* just below clock */
+  width: 400px;
+  z-index: 10;
+}
+
+/* ─── RIGHT COLUMN ────────────────────────────────────────────────────────── */
+/* Search bar: top-right */
 .searchArea {
   position: absolute;
   right: 48px;
-  top: 48px;
-  width: 480px;
+  top: 44px;
+  width: 460px;
   z-index: 20;
 }
 
-/* ─── Dashboard cards ── bottom-right stacked ───────────────────────────────── */
+/* Productivity + Tab cards: stacked directly under search bar */
 .cardsArea {
   position: absolute;
   right: 48px;
-  top: 130px;
-  bottom: 110px;
-  width: 480px;
+  top: 110px;
+  width: 460px;
+  bottom: 108px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   overflow: hidden;
   z-index: 10;
 }
 
-/* ─── Settings gear ── bottom-right fixed ───────────────────────────────────── */
+/* ─── Settings gear bottom-right ─────────────────────────────────────────── */
 .settingsArea {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: 22px;
+  right: 22px;
   z-index: 800;
 }

@@ -1,30 +1,27 @@
-/* ─── Edge trigger strip ────────────────────────────────────────────────────── */
+/* ── Edge trigger strip ─────────────────────────────────────────────────── */
 .edgeTrigger {
   position: fixed;
-  left: 0;
-  top: 0;
-  width: 8px;
-  height: 100vh;
+  left: 0; top: 0;
+  width: 8px; height: 100vh;
   z-index: 500;
   cursor: pointer;
   background: transparent;
+  transition: background 0.3s ease;
 }
-.edgeTrigger:hover {
-  background: rgba(255, 255, 255, 0.03);
-}
+.edgeTrigger:hover { background: rgba(255,255,255,0.025); }
 
-/* ─── Backdrop ──────────────────────────────────────────────────────────────── */
+/* ── Backdrop ───────────────────────────────────────────────────────────── */
 .backdrop {
   position: fixed;
   inset: 0;
   z-index: 490;
-  background: transparent;
 }
 
-/* ─── Wheel panel container ─────────────────────────────────────────────────── */
-.wheelContainer {
+/* ── Sliding panel container ─────────────────────────────────────────────── */
+/* A 500×500 circle shifted left by 250px so only the right half is visible */
+.panel {
   position: fixed;
-  left: -250px;          /* shifted so only the right half of the circle is visible */
+  left: -250px;
   top: 50%;
   transform: translateY(-50%);
   width: 500px;
@@ -33,108 +30,99 @@
   pointer-events: auto;
 }
 
-/* ─── The circular background ───────────────────────────────────────────────── */
-.semiCircle {
+/* ── Glass circle ───────────────────────────────────────────────────────── */
+.circle {
   position: absolute;
   inset: 0;
   border-radius: 50%;
   background: rgba(8, 8, 10, 0.88);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 6px 0 48px rgba(0, 0, 0, 0.7), inset -1px 0 0 rgba(255,255,255,0.05);
+  backdrop-filter: blur(26px);
+  -webkit-backdrop-filter: blur(26px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow:
+    4px 0 40px rgba(0, 0, 0, 0.7),
+    inset -1px 0 0 rgba(255,255,255,0.04);
 }
 
-/* ─── Center AI button ───────────────────────────────────────────────────────── */
-.centerNode {
+/* ── Center "AI" button ─────────────────────────────────────────────────── */
+.center {
   position: absolute;
-  left: 50%;
-  top: 50%;
+  left: 50%; top: 50%;
   transform: translate(-50%, -50%);
-  width: 52px;
-  height: 52px;
+  width: 54px; height: 54px;
   border-radius: 50%;
-  background: rgba(20, 20, 22, 0.9);
+  background: rgba(16, 16, 18, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.14);
   color: #ffffff;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 13px; font-weight: 600;
   letter-spacing: 0.04em;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  display: flex; align-items: center; justify-content: center;
   z-index: 10;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
-.centerNode:hover {
+.center:hover {
   border-color: var(--accent);
-  box-shadow: 0 0 16px rgba(255,255,255,0.06);
+  box-shadow: 0 0 18px rgba(255,255,255,0.06);
 }
 
-/* ─── Individual node wrapper (absolutely positioned on arc) ────────────────── */
-.nodeWrapper {
+/* ── Arc node wrapper (absolute-positioned on the circle) ───────────────── */
+.nodeWrap {
   position: absolute;
   transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 
-/* ─── Node button ────────────────────────────────────────────────────────────── */
+/* ── Node button ────────────────────────────────────────────────────────── */
 .node {
-  width: 44px;
-  height: 44px;
+  width: 46px; height: 46px;
   border-radius: 50%;
-  background: rgba(18, 18, 20, 0.9);
+  background: rgba(16, 16, 18, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  color: rgba(255, 255, 255, 0.65);
+  display: flex; align-items: center; justify-content: center;
   cursor: pointer;
   text-decoration: none;
-  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
-  position: relative;
-  z-index: 2;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
 }
 .node:hover,
-.nodeHovered {
-  background: rgba(255, 255, 255, 0.06);
+.nodeHov {
+  background: rgba(255,255,255,0.07);
   border-color: var(--accent);
   color: #ffffff;
-  transform: scale(1.15);
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.08);
+  transform: scale(1.18);
+  box-shadow: 0 0 22px rgba(255,255,255,0.07);
 }
 
-.nodeIcon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
+/* SVG icon inside node */
+.icon {
+  display: flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
 }
-.nodeIcon svg {
-  width: 100%;
-  height: 100%;
-}
+.icon svg { width: 100%; height: 100%; }
 
-/* ─── Hover label ────────────────────────────────────────────────────────────── */
+/* ── Hover label ────────────────────────────────────────────────────────── */
 .label {
-  background: rgba(8, 8, 10, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(6, 6, 8, 0.92);
+  border: 1px solid rgba(255,255,255,0.1);
   color: #ffffff;
   font-family: 'Inter', sans-serif;
-  font-size: 10px;
-  font-weight: 500;
+  font-size: 10px; font-weight: 500;
   letter-spacing: 0.04em;
   padding: 3px 8px;
   border-radius: 4px;
   white-space: nowrap;
   pointer-events: none;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(10px);
   position: absolute;
   top: calc(100% + 6px);
   left: 50%;
