@@ -1,0 +1,183 @@
+.card {
+  width: 100%;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.header {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.statsRow {
+  display: flex;
+  gap: 24px;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metricVal {
+  font-size: 28px;
+  font-weight: 300;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.metricLabel {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-disabled);
+  letter-spacing: 0.05em;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sectionTitle {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-disabled);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.categoriesList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.catRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.catInfo {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.catName {
+  color: var(--text-secondary);
+}
+
+.catCount {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.progressContainer {
+  height: 3px;
+  background: var(--bg-raised);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.progressBar {
+  height: 100%;
+  background: var(--accent);
+}
+
+.dupList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dupRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  background: rgba(245, 158, 11, 0.05);
+  border: 1px solid rgba(245, 158, 11, 0.1);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+}
+
+.dupUrl {
+  color: #f59e0b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 180px;
+}
+
+.dupActions {
+  display: flex;
+  gap: 6px;
+}
+
+.dupBtn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dupBtn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.domainList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.domainRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+
+.domainName {
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.domainMeta {
+  color: var(--text-disabled);
+  display: flex;
+  gap: 4px;
+}
+
+.emptyState {
+  font-size: 11px;
+  color: var(--text-disabled);
+  text-align: center;
+  padding: 12px 0;
+}

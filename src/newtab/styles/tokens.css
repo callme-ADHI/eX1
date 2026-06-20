@@ -1,0 +1,71 @@
+/* ─── Design Tokens — One accent swap per theme ─────────────────────────────── */
+
+:root {
+  /* Base palette — invariant across all themes */
+  --bg-base:         #000000;
+  --bg-surface:      #0A0A0C;
+  --bg-raised:       #111113;
+  --bg-hover:        #18181B;
+  --border:          rgba(255, 255, 255, 0.08);
+  --border-strong:   rgba(255, 255, 255, 0.15);
+  --text-primary:    #FFFFFF;
+  --text-secondary:  #A1A1AA;
+  --text-disabled:   #52525B;
+
+  /* Accent — default: Obsidian Platinum */
+  --accent:          #E5E7EB;
+  --accent-muted:    rgba(229, 231, 235, 0.12);
+  --accent-glow:     rgba(229, 231, 235, 0.06);
+
+  /* Typography */
+  --font-sans:       'Inter', -apple-system, sans-serif;
+  --font-mono:       'IBM Plex Mono', 'JetBrains Mono', monospace;
+
+  /* Radii */
+  --radius-sm:       6px;
+  --radius-md:       10px;
+  --radius-lg:       16px;
+  --radius-pill:     999px;
+
+  /* Blur / glass */
+  --blur:            blur(20px);
+  --glass:           rgba(0, 0, 0, 0.6);
+
+  /* Motion */
+  --spring-fast:     150ms;
+  --spring-normal:   200ms;
+  --spring-slow:     300ms;
+}
+
+/* ─── Theme variants ────────────────────────────────────────────────────────── */
+
+[data-theme="platinum"] {
+  --accent:       #E5E7EB;
+  --accent-muted: rgba(229, 231, 235, 0.12);
+  --accent-glow:  rgba(229, 231, 235, 0.06);
+}
+[data-theme="sapphire"] {
+  --accent:       #2452FF;
+  --accent-muted: rgba(36, 82, 255, 0.15);
+  --accent-glow:  rgba(36, 82, 255, 0.08);
+}
+[data-theme="crimson"] {
+  --accent:       #C81E3A;
+  --accent-muted: rgba(200, 30, 58, 0.15);
+  --accent-glow:  rgba(200, 30, 58, 0.08);
+}
+[data-theme="gold"] {
+  --accent:       #C9A24B;
+  --accent-muted: rgba(201, 162, 75, 0.15);
+  --accent-glow:  rgba(201, 162, 75, 0.08);
+}
+[data-theme="emerald"] {
+  --accent:       #1E8F5E;
+  --accent-muted: rgba(30, 143, 94, 0.15);
+  --accent-glow:  rgba(30, 143, 94, 0.08);
+}
+[data-theme="violet"] {
+  --accent:       #7C5CFF;
+  --accent-muted: rgba(124, 92, 255, 0.15);
+  --accent-glow:  rgba(124, 92, 255, 0.08);
+}

@@ -1,0 +1,26 @@
+.root {
+  width: 100vw;
+  height: 100vh;
+  background: var(--bg-base);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr;
+  padding: 40px 48px 120px;
+  gap: 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+.leftCol {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.rightCol {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: stretch;
+}

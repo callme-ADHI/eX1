@@ -1,0 +1,156 @@
+.card {
+  width: 100%;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.tabBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-disabled);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 6px;
+  letter-spacing: 0.05em;
+  transition: color 0.15s ease;
+}
+
+.tabBtn.activeTab {
+  color: var(--accent);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.scoreRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.scoreContainer {
+  display: flex;
+  align-items: baseline;
+}
+
+.score {
+  font-size: 42px;
+  font-weight: 300;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.scoreScale {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-left: 2px;
+}
+
+.statsSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11px;
+}
+
+.statLabel {
+  color: var(--text-disabled);
+  font-weight: 600;
+}
+
+.statVal {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.expandBtn {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  padding: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition: all 0.15s ease;
+}
+
+.expandBtn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: hidden;
+  border-top: 1px dashed var(--border);
+  padding-top: 14px;
+}
+
+.factorSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sectionTitle {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.factorRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+
+.factorLabel {
+  color: var(--text-secondary);
+}
+
+.factorVal {
+  font-weight: 600;
+}
+
+.emptyState {
+  font-size: 11px;
+  color: var(--text-disabled);
+  text-align: center;
+  padding: 12px 0;
+}

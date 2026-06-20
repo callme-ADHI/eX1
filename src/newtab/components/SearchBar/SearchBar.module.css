@@ -1,0 +1,123 @@
+.container {
+  position: relative;
+  width: 100%;
+}
+
+.searchForm {
+  display: flex;
+  align-items: center;
+  background: var(--glass);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  gap: 10px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.searchForm.focused {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-glow), 0 4px 25px rgba(0, 0, 0, 0.5);
+}
+
+.engineBadge {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+}
+
+.engineText {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+.input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--text-disabled);
+}
+
+.clearBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 100%;
+  max-height: 320px;
+  overflow-y: auto;
+  z-index: 100;
+  padding: 12px 0;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+}
+
+.dropdownHeader {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-disabled);
+  padding: 4px 16px;
+  letter-spacing: 0.05em;
+}
+
+.optionsList {
+  display: flex;
+  flex-direction: column;
+}
+
+.optionRow {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  gap: 12px;
+  transition: background 0.15s ease;
+}
+
+.optionRow:hover {
+  background: var(--bg-hover);
+}
+
+.optionPrefix {
+  font-size: 11px;
+  color: var(--accent);
+  width: 32px;
+  font-weight: 500;
+}
+
+.optionLabel {
+  font-size: 12px;
+}
+
+.dropdownDivider {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 0;
+}
