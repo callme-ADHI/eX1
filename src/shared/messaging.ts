@@ -20,8 +20,13 @@ export type MessageResponse<T = any> =
 
 // ─── Typed send helper ────────────────────────────────────────────────────────
 
-export function sendMessage<T = void>(message: Message): Promise<MessageResponse<T>> {
+export function sendMessage<T = any>(message: Message): Promise<MessageResponse<T>> {
   return new Promise((resolve) => {
+    if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
+      console.warn('[eX1] Messaging fallback: Extension environment not available.', message);
+      resolve({ ok: false, error: 'Extension environment not available' });
+      return;
+    }
     chrome.runtime.sendMessage(message, (response: MessageResponse<T>) => {
       if (chrome.runtime.lastError) {
         resolve({ ok: false, error: chrome.runtime.lastError.message ?? 'Unknown error' });

@@ -1,26 +1,59 @@
+/* ─── Root fullscreen overlay ────────────────────────────────────────────────── */
 .root {
   width: 100vw;
   height: 100vh;
-  background: var(--bg-base);
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr;
-  padding: 40px 48px 120px;
-  gap: 32px;
+  background: #000000;
   position: relative;
   overflow: hidden;
+  font-family: 'Inter', -apple-system, sans-serif;
 }
 
-.leftCol {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  align-items: flex-start;
+/* Subtle radial background vignette */
+.root::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 25% 40%, rgba(255,255,255,0.025) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
 }
 
-.rightCol {
+/* ─── Clock ── absolute positioned left-center ──────────────────────────────── */
+.clockArea {
+  position: absolute;
+  left: 22%;
+  top: 38%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+}
+
+/* ─── Search bar ── absolute positioned top-right ───────────────────────────── */
+.searchArea {
+  position: absolute;
+  right: 48px;
+  top: 48px;
+  width: 480px;
+  z-index: 20;
+}
+
+/* ─── Dashboard cards ── bottom-right stacked ───────────────────────────────── */
+.cardsArea {
+  position: absolute;
+  right: 48px;
+  top: 130px;
+  bottom: 110px;
+  width: 480px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  align-items: stretch;
+  gap: 16px;
+  overflow: hidden;
+  z-index: 10;
+}
+
+/* ─── Settings gear ── bottom-right fixed ───────────────────────────────────── */
+.settingsArea {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 800;
 }

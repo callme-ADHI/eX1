@@ -18,34 +18,39 @@ import styles from './App.module.css';
 export default function App() {
   const [settings] = useStorage<AppSettings>(KEYS.SETTINGS, DEFAULT_SETTINGS);
 
-  // Apply theme to root
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', settings.theme ?? 'platinum');
   }, [settings.theme]);
 
   return (
     <div className={styles.root}>
-      {/* ── Left column ──────────────────────────────── */}
-      <div className={styles.leftCol}>
+      {/* ── Big clock left-center ─────────────────────── */}
+      <div className={styles.clockArea}>
         <Clock settings={settings} />
-        <FocusCard />
       </div>
 
-      {/* ── Right column ─────────────────────────────── */}
-      <div className={styles.rightCol}>
+      {/* ── Search bar top-right ──────────────────────── */}
+      <div className={styles.searchArea}>
         <SearchBar />
+      </div>
+
+      {/* ── Dashboard cards right panel ───────────────── */}
+      <div className={styles.cardsArea}>
+        <FocusCard />
         <ProductivityCard />
         <TabIntelCard />
       </div>
 
-      {/* ── AI Wheel (edge-triggered, layers over all) ─ */}
+      {/* ── AI Wheel edge-triggered left side ────────── */}
       <AIWheel />
 
-      {/* ── Bottom Dock ──────────────────────────────── */}
+      {/* ── Bottom Dock ───────────────────────────────── */}
       <Dock />
 
-      {/* ── Settings gear (fixed bottom-right) ───────── */}
-      <SettingsPanel />
+      {/* ── Settings gear bottom-right ────────────────── */}
+      <div className={styles.settingsArea}>
+        <SettingsPanel />
+      </div>
     </div>
   );
 }
