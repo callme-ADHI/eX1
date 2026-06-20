@@ -19,35 +19,35 @@
 }
 
 /* ─── LEFT COLUMN ─────────────────────────────────────────────────────────── */
-/* Clock: absolute, moved left by 1.5cm and up by 4cm from the center */
+/* Clock: absolute, lowered closer to center vertically (1.2cm above center) */
 .clockArea {
   position: absolute;
   left: calc(25% - 1.5cm);
-  top: calc(50% - 4cm);
+  top: calc(50% - 1.2cm);
   transform: translate(-50%, -50%);
   z-index: 10;
 }
 
-/* Focus strip: sits just below the clock */
+/* Focus strip: placed lower down (2.4cm below center) to avoid touching the clock */
 .focusArea {
   position: absolute;
   left: calc(25% - 1.5cm - 200px);   /* left-align with clock */
-  top: calc(50% - 4cm + 90px);       /* placed right below clock */
+  top: calc(50% + 2.4cm);
   width: 400px;
   z-index: 10;
 }
 
 /* ─── RIGHT COLUMN ────────────────────────────────────────────────────────── */
-/* Search bar: top-right */
+/* Search bar: top-right, spans 58vw (more than 50% of the screen) */
 .searchArea {
   position: absolute;
   right: 48px;
   top: 44px;
-  width: 460px;
+  width: 58vw;
   z-index: 20;
 }
 
-/* Productivity + Tab cards: stacked directly under search bar */
+/* Productivity + Tab cards: stacked directly under search bar, keeping compact width */
 .cardsArea {
   position: absolute;
   right: 48px;

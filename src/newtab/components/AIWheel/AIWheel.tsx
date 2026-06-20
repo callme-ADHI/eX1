@@ -8,12 +8,28 @@ import { DEFAULT_SETTINGS } from '../../../shared/defaults';
 import styles from './AIWheel.module.css';
 
 export default function AIWheel() {
-  const [tools]    = useStorage<AITool[]>(KEYS.AI_TOOLS, DEFAULT_AI_TOOLS);
+  const [tools, setTools] = useStorage<AITool[]>(KEYS.AI_TOOLS, DEFAULT_AI_TOOLS);
   const [settings] = useStorage<AppSettings>(KEYS.SETTINGS, DEFAULT_SETTINGS);
   const [open, setOpen]       = useState(false);
   const [hovered, setHovered] = useState<string | null>(null);
   const leaveRef = useRef<number | undefined>(undefined);
   const enterRef = useRef<number | undefined>(undefined);
+
+  // Auto-sync stored tool icons with the high-quality legacy SVGs
+  useEffect(() => {
+    let changed = false;
+    const updated = tools.map(t => {
+      const def = DEFAULT_AI_TOOLS.find(d => d.id === t.id);
+      if (def && def.icon !== t.icon) {
+        changed = true;
+        return { ...t, icon: def.icon };
+      }
+      return t;
+    });
+    if (changed) {
+      setTools(updated);
+    }
+  }, [tools, setTools]);
 
   const active = tools
     .filter(t => t.pinned !== false)
@@ -87,9 +103,9 @@ export default function AIWheel() {
             {/* Semicircle panel slider */}
             <motion.div
               className={styles.panel}
-              initial={{ x: -300 }}
-              animate={{ x: 0 }}
-              exit={{ x: -300 }}
+              initial={{ x: -300, y: '-50%' }}
+              animate={{ x: 0, y: '-50%' }}
+              exit={{ x: -300, y: '-50%' }}
               transition={{ type: 'spring', stiffness: 270, damping: 28 }}
               onMouseEnter={cancelClose}
               onMouseLeave={scheduleClose}
