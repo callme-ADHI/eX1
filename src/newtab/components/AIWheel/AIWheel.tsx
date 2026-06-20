@@ -19,10 +19,13 @@ export default function AIWheel() {
     .filter(t => t.pinned !== false)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
-  /* keyboard toggle */
+  /* Ctrl+Space keyboard toggle */
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
-      if (e.altKey && e.code === 'Space') { e.preventDefault(); setOpen(p => !p); }
+      if (e.ctrlKey && e.code === 'Space') {
+        e.preventDefault();
+        setOpen(p => !p);
+      }
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
@@ -34,11 +37,14 @@ export default function AIWheel() {
   };
   const scheduleClose = () => {
     clearTimeout(enterRef.current);
-    leaveRef.current = window.setTimeout(() => { setOpen(false); setHovered(null); }, 500);
+    leaveRef.current = window.setTimeout(() => {
+      setOpen(false);
+      setHovered(null);
+    }, 500);
   };
   const cancelClose = () => clearTimeout(leaveRef.current);
 
-  /* navigate */
+  /* Open URL */
   const go = (tool: AITool, e: React.MouseEvent) => {
     e.preventDefault();
     const url = tool.url;
@@ -55,12 +61,12 @@ export default function AIWheel() {
   const PAD = 0.28;        // angular padding from top/bottom
   const t0 = -Math.PI / 2 + PAD;
   const t1 =  Math.PI / 2 - PAD;
-  // The 500×500 circle is centred at (250, 250), shifted left by 250px so only right half shows
+  // Semicircle center at CX=250, CY=250 in the 500x500 local container
   const CX = 250, CY = 250;
 
   return (
     <>
-      {/* ── Invisible 8px strip on left edge ── */}
+      {/* Invisible edge trigger strip */}
       {settings.edgeActivation !== false && (
         <div className={styles.edgeTrigger} onMouseEnter={startOpen} onMouseLeave={scheduleClose} />
       )}
@@ -68,26 +74,29 @@ export default function AIWheel() {
       <AnimatePresence>
         {open && (
           <>
-            {/* dim backdrop */}
+            {/* Click-out backdrop */}
             <motion.div
               className={styles.backdrop}
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
               onClick={() => setOpen(false)}
             />
 
-            {/* semi-circle panel */}
+            {/* Semicircle panel slider */}
             <motion.div
               className={styles.panel}
-              initial={{ x: -300 }} animate={{ x: 0 }} exit={{ x: -300 }}
+              initial={{ x: -300 }}
+              animate={{ x: 0 }}
+              exit={{ x: -300 }}
               transition={{ type: 'spring', stiffness: 270, damping: 28 }}
               onMouseEnter={cancelClose}
               onMouseLeave={scheduleClose}
             >
-              {/* glass circle background */}
+              {/* Glass circular container */}
               <div className={styles.circle}>
-
-                {/* Center AI button */}
+                {/* Center trigger node */}
                 <button className={styles.center} onClick={() => setOpen(false)}>
                   <span>AI</span>
                 </button>
@@ -126,9 +135,9 @@ export default function AIWheel() {
                         {isHov && (
                           <motion.span
                             className={styles.label}
-                            initial={{ opacity: 0, y: 4 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 4 }}
+                            initial={{ opacity: 0, x: -6 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -6 }}
                             transition={{ duration: 0.12 }}
                           >
                             {tool.name}

@@ -118,6 +118,7 @@ export interface AppSettings {
   edgeActivation: boolean;
   shortcut: string;
   focusBlocklist: string[];
+  searchEngine: string;
 }
 
 export interface ExtensionState {

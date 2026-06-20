@@ -49,4 +49,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   edgeActivation: true,
   shortcut: 'Alt+Space',
   focusBlocklist: ['youtube.com', 'instagram.com', 'reddit.com', 'twitter.com', 'x.com'],
+  searchEngine: 'google',
 };

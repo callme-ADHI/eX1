@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useStorage } from '../../hooks/useStorage';
 import { KEYS } from '../../../shared/storage';
 import { sendMessage } from '../../../shared/messaging';
@@ -11,9 +12,34 @@ const CATS = ['Study', 'Coding', 'Research', 'Writing'];
 export default function FocusStrip() {
   const [session] = useStorage<FocusSession | null>(KEYS.CURRENT_SESSION, null);
   const isActive = session && (session.status === 'active' || session.status === 'paused');
-  return isActive
-    ? <ActiveView session={session} />
-    : <IdleView />;
+
+  return (
+    <div style={{ position: 'relative', width: '100%' }}>
+      <AnimatePresence mode="wait">
+        {isActive ? (
+          <motion.div
+            key="active"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+          >
+            <ActiveView session={session} />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="idle"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+          >
+            <IdleView />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
 
 /* ─── Idle: compact form ─────────────────────────────────────────────────── */

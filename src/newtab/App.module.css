@@ -19,20 +19,20 @@
 }
 
 /* ─── LEFT COLUMN ─────────────────────────────────────────────────────────── */
-/* Clock: absolute, left 1/4, centered vertically at ~38% */
+/* Clock: absolute, moved left by 1.5cm and up by 4cm from the center */
 .clockArea {
   position: absolute;
-  left: 22%;
-  top: 38%;
+  left: calc(25% - 1.5cm);
+  top: calc(50% - 4cm);
   transform: translate(-50%, -50%);
   z-index: 10;
 }
 
-/* Focus strip: sits just below the clock, same left alignment */
+/* Focus strip: sits just below the clock */
 .focusArea {
   position: absolute;
-  left: calc(22% - 200px);   /* left-align with clock */
-  top: calc(38% + 110px);   /* just below clock */
+  left: calc(25% - 1.5cm - 200px);   /* left-align with clock */
+  top: calc(50% - 4cm + 90px);       /* placed right below clock */
   width: 400px;
   z-index: 10;
 }

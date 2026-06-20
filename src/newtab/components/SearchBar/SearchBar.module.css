@@ -3,121 +3,193 @@
   width: 100%;
 }
 
+/* ─── Search Form Container ─── */
 .searchForm {
   display: flex;
   align-items: center;
-  background: var(--glass);
-  backdrop-filter: var(--blur);
-  -webkit-backdrop-filter: var(--blur);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  padding: 8px 12px;
-  gap: 10px;
+  background: rgba(10, 10, 12, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  padding: 0 16px;
+  height: 52px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 10px rgba(255, 255, 255, 0.01);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
-.searchForm.focused {
+.searchForm:focus-within,
+.focused {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-glow), 0 4px 25px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.08);
 }
 
+/* ─── Engine badge ─── */
 .engineBadge {
-  background: var(--bg-raised);
-  border: 1px solid var(--border);
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+  margin-right: 8px;
+}
+.engineBadge:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.engineIcon {
+  display: flex;
+  align-items: center;
+  color: var(--accent);
+}
+.engineIcon svg {
+  width: 14px;
+  height: 14px;
 }
 
 .engineText {
-  font-family: var(--font-mono);
+  font-family: 'Inter', sans-serif;
   font-size: 11px;
-  font-weight: bold;
-  color: var(--accent);
-  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.engineBadge:hover .engineText {
+  color: var(--text-primary);
 }
 
+/* ─── Search icon ─── */
+.searchIcon {
+  color: var(--text-secondary);
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+}
+.searchIcon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ─── Input element ─── */
 .input {
   flex: 1;
   background: transparent;
   border: none;
-  color: var(--text-primary);
-  font-size: 13px;
   outline: none;
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  height: 100%;
 }
-
 .input::placeholder {
   color: var(--text-disabled);
 }
 
-.clearBtn {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  font-size: 16px;
-  cursor: pointer;
-  padding: 0 4px;
+/* ─── Hint indicator ─── */
+.searchHint {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--text-disabled);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+  background: rgba(255, 255, 255, 0.02);
 }
 
+/* ─── Engine menu dropdown ─── */
+.engineSelector {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 100%;
+  background: rgba(10, 10, 12, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  z-index: 210;
+}
+
+.engineItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.engineItem:hover,
+.engineActive {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+}
+
+.itemIcon {
+  display: flex;
+  align-items: center;
+}
+.itemIcon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.itemName {
+  flex: 1;
+}
+
+.itemPrefix {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--text-disabled);
+}
+
+/* ─── Search suggestion dropdown ─── */
 .dropdown {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
   width: 100%;
-  max-height: 320px;
-  overflow-y: auto;
-  z-index: 100;
-  padding: 12px 0;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
-}
-
-.dropdownHeader {
-  font-family: var(--font-sans);
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-disabled);
-  padding: 4px 16px;
-  letter-spacing: 0.05em;
-}
-
-.optionsList {
+  background: rgba(10, 10, 12, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7);
   display: flex;
   flex-direction: column;
+  z-index: 200;
 }
 
-.optionRow {
+.dropdownItem {
   display: flex;
   align-items: center;
-  width: 100%;
-  padding: 8px 16px;
-  background: transparent;
-  border: none;
-  color: var(--text-primary);
-  text-align: left;
-  cursor: pointer;
   gap: 12px;
-  transition: background 0.15s ease;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.dropdownItem:hover,
+.dropdownActive {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
 }
 
-.optionRow:hover {
-  background: var(--bg-hover);
-}
-
-.optionPrefix {
-  font-size: 11px;
-  color: var(--accent);
-  width: 32px;
-  font-weight: 500;
-}
-
-.optionLabel {
-  font-size: 12px;
-}
-
-.dropdownDivider {
-  height: 1px;
-  background: var(--border);
-  margin: 8px 0;
+.itemShortcut {
+  margin-left: auto;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--text-disabled);
 }
