@@ -35,14 +35,14 @@ export function playTactileTick() {
     
     lastPlayTime = playTime;
     
-    // 1. Setup main gain at 100% maximum volume
+    // 1. Setup main gain at 25x volume
     const mainGain = ctx.createGain();
-    mainGain.gain.setValueAtTime(1.0, playTime); 
+    mainGain.gain.setValueAtTime(25.0, playTime); 
     mainGain.connect(ctx.destination);
     
-    // 2. High-speed frequency sweep oscillator using a punchy triangle wave
+    // 2. High-speed frequency sweep oscillator using a bright sawtooth wave for max presence
     const osc = ctx.createOscillator();
-    osc.type = 'triangle';
+    osc.type = 'sawtooth';
     osc.frequency.setValueAtTime(2000, playTime);
     osc.frequency.exponentialRampToValueAtTime(150, playTime + 0.012);
     
