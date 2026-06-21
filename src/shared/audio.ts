@@ -37,7 +37,7 @@ export function playTactileTick() {
     
     // 1. Setup gain envelope for clean decay
     const mainGain = ctx.createGain();
-    mainGain.gain.setValueAtTime(0.18, playTime); // Subtle premium volume
+    mainGain.gain.setValueAtTime(0.85, playTime); // Increased from 0.18 for 100% audibility
     mainGain.connect(ctx.destination);
     
     // 2. High-speed frequency sweep oscillator
@@ -54,8 +54,8 @@ export function playTactileTick() {
     
     // 4. Tight exponential gain decay
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.85, playTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, playTime + 0.009);
+    gain.gain.setValueAtTime(1.0, playTime); // Set to max gain
+    gain.gain.exponentialRampToValueAtTime(0.001, playTime + 0.016); // Slightly longer decay for better speaker audibility
     
     // Connections
     osc.connect(filter);
@@ -64,7 +64,7 @@ export function playTactileTick() {
     
     // Playback scheduling
     osc.start(playTime);
-    osc.stop(playTime + 0.015);
+    osc.stop(playTime + 0.025);
   } catch (err) {
     console.warn('Tactile tick audio failed to play:', err);
   }
