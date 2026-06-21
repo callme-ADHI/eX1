@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 
+// Main build: newtab dashboard + background service worker
 export default defineConfig({
   plugins: [react()],
   build: {
@@ -10,10 +11,10 @@ export default defineConfig({
       input: {
         index:      resolve(__dirname, 'index.html'),
         newtab:     resolve(__dirname, 'newtab.html'),
-        content:    resolve(__dirname, 'src/content/content.tsx'),
         background: resolve(__dirname, 'src/background/service-worker.ts'),
       },
       output: {
+        format: 'es',
         entryFileNames: (chunk) => {
           if (chunk.name === 'newtab') return 'newtab.js';
           return '[name].js';

@@ -1,6 +1,6 @@
 import { storageGet, storageSet, KEYS } from '../shared/storage';
 import type { SecurityReport } from '../shared/types';
-import { extractDomain } from './tabEngine';
+import { extractDomain } from '../shared/utils';
 
 // ─── Security Engine ──────────────────────────────────────────────────────────
 // Zero paid APIs. Uses: RDAP (free), local heuristics, webNavigation security info.

@@ -1,26 +1,62 @@
+.hostWrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.triggerStrip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 15px;
+  height: 100vh;
+  z-index: 2147483646;
+  background: transparent;
+  cursor: w-resize;
+  transition: background 0.3s ease, border-left 0.3s ease;
+}
+
+.triggerStrip:hover {
+  background: linear-gradient(90deg, rgba(0, 255, 210, 0.10) 0%, transparent 100%);
+  border-left: 3px solid #00ffd2;
+}
+
+.triggerStripHidden {
+  pointer-events: none;
+  opacity: 0;
+}
+
 .panelContainer {
   position: fixed;
   left: 0;
   top: 0;
-  width: 280px;
+  width: 300px;
   height: 100vh;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--border-strong);
-  border-radius: 0 10px 10px 0;
-  box-shadow: 10px 0 40px rgba(0, 0, 0, 0.6);
-  z-index: 2147483647; /* absolute top overlay */
-  background: var(--glass);
-  backdrop-filter: var(--blur);
-  -webkit-backdrop-filter: var(--blur);
+  border-right: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 10px 0 60px rgba(0, 0, 0, 0.9);
+  z-index: 2147483647;
+  background: rgba(8, 8, 12, 0.96);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
   overflow: hidden;
-  color: var(--text-primary);
-  font-family: var(--font-sans);
+  color: #e8e8f0;
+  font-family: 'Inter', 'IBM Plex Mono', system-ui, sans-serif;
+}
+
+.activeBorderLine {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 2px;
+  height: 100%;
+  background: linear-gradient(180deg, transparent, #00ffd2, transparent);
 }
 
 .topHalf, .bottomHalf {
   flex: 1;
-  padding: 20px;
+  padding: 24px 20px;
   overflow-y: auto;
 }
 
@@ -39,8 +75,8 @@
 .sectionHeader {
   font-size: 10px;
   font-weight: 700;
-  color: var(--text-disabled);
-  letter-spacing: 0.05em;
+  color: rgba(255,255,255,0.35);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -51,16 +87,16 @@
 }
 
 .timeValue {
-  font-family: var(--font-mono);
+  font-family: 'IBM Plex Mono', monospace;
   font-size: 32px;
   font-weight: 300;
-  color: var(--text-primary);
+  color: #e8e8f0;
 }
 
 .focusGoal {
   font-size: 12px;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: rgba(255,255,255,0.55);
 }
 
 .focusMeta {
@@ -70,20 +106,20 @@
 
 .categoryTag {
   font-size: 9px;
-  background: var(--accent-muted);
-  border: 1px solid var(--accent);
-  color: var(--accent);
+  background: rgba(0,255,210,0.08);
+  border: 1px solid rgba(0,255,210,0.3);
+  color: #00ffd2;
   padding: 2px 6px;
-  border-radius: var(--radius-pill);
+  border-radius: 100px;
 }
 
 .warningTag {
   font-size: 9px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.2);
   color: #ef4444;
   padding: 2px 6px;
-  border-radius: var(--radius-pill);
+  border-radius: 100px;
 }
 
 .actions {
@@ -94,11 +130,11 @@
 
 .actionBtn {
   flex: 1;
-  background: var(--bg-raised);
-  border: 1px solid var(--border);
-  color: var(--text-primary);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #e8e8f0;
   padding: 6px 10px;
-  border-radius: var(--radius-sm);
+  border-radius: 6px;
   font-size: 10px;
   font-weight: 600;
   cursor: pointer;
@@ -106,17 +142,17 @@
 }
 
 .actionBtn:hover {
-  background: var(--bg-hover);
-  border-color: var(--border-strong);
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.2);
 }
 
 .cancelBtn {
   color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239,68,68,0.2);
 }
 
 .cancelBtn:hover {
-  background: rgba(239, 68, 68, 0.1);
+  background: rgba(239,68,68,0.1);
 }
 
 .idleState {
@@ -132,12 +168,12 @@
 .idleText {
   font-size: 11px;
   font-weight: 600;
-  color: var(--text-disabled);
+  color: rgba(255,255,255,0.3);
 }
 
 .tipText {
   font-size: 10px;
-  color: var(--text-disabled);
+  color: rgba(255,255,255,0.25);
 }
 
 .securityBody {
@@ -152,42 +188,42 @@
   align-items: center;
   font-size: 11px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: rgba(255,255,255,0.5);
 }
 
 .verdictBadge {
   padding: 2px 8px;
-  border-radius: var(--radius-pill);
+  border-radius: 100px;
   font-size: 10px;
   font-weight: 700;
 }
 
 .safe {
   color: #22c55e;
-  background: rgba(34, 197, 94, 0.1);
-  border: 1px solid rgba(34, 197, 94, 0.2);
+  background: rgba(34,197,94,0.1);
+  border: 1px solid rgba(34,197,94,0.2);
 }
 
 .medium {
   color: #f59e0b;
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.2);
+  background: rgba(245,158,11,0.1);
+  border: 1px solid rgba(245,158,11,0.2);
 }
 
 .high {
   color: #ef4444;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.2);
 }
 
 .detailsList {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
   padding: 8px 10px;
-  border-radius: var(--radius-sm);
+  border-radius: 6px;
 }
 
 .detailItem {
@@ -197,11 +233,11 @@
 }
 
 .detailLabel {
-  color: var(--text-disabled);
+  color: rgba(255,255,255,0.3);
 }
 
 .detailVal {
-  color: var(--text-primary);
+  color: #e8e8f0;
   font-weight: 500;
 }
 
@@ -214,7 +250,7 @@
 .flagsLabel {
   font-size: 10px;
   font-weight: 600;
-  color: var(--text-disabled);
+  color: rgba(255,255,255,0.3);
 }
 
 .flagsList {
@@ -225,17 +261,19 @@
 
 .flagItem {
   font-size: 9px;
-  background: rgba(239, 68, 68, 0.06);
-  border: 1px solid rgba(239, 68, 68, 0.15);
+  background: rgba(239,68,68,0.06);
+  border: 1px solid rgba(239,68,68,0.15);
   color: #ef4444;
   padding: 2px 6px;
-  border-radius: var(--radius-sm);
+  border-radius: 6px;
   text-transform: uppercase;
 }
 
 .loading {
   font-size: 11px;
-  color: var(--text-disabled);
+  color: rgba(255,255,255,0.3);
   text-align: center;
   padding: 16px 0;
+  font-style: italic;
 }
+

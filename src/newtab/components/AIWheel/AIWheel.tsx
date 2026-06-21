@@ -2,232 +2,205 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStorage } from '../../hooks/useStorage';
 import { KEYS } from '../../../shared/storage';
-import { DEFAULT_AI_TOOLS } from '../../../shared/defaults';
+import { DEFAULT_AI_TOOLS, DEFAULT_SETTINGS } from '../../../shared/defaults';
 import type { AITool, AppSettings } from '../../../shared/types';
-import { DEFAULT_SETTINGS } from '../../../shared/defaults';
 import styles from './AIWheel.module.css';
 
 export default function AIWheel() {
   const [tools, setTools] = useStorage<AITool[]>(KEYS.AI_TOOLS, DEFAULT_AI_TOOLS);
   const [settings] = useStorage<AppSettings>(KEYS.SETTINGS, DEFAULT_SETTINGS);
-  const [open, setOpen]       = useState(false);
+  const [open, setOpen] = useState(false);
   const [hovered, setHovered] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const leaveRef = useRef<number | undefined>(undefined);
-  const enterRef = useRef<number | undefined>(undefined);
+  const [dragOver, setDragOver] = useState<number | null>(null);
+  const leaveTimer = useRef<number>(undefined as unknown as number);
+  const enterTimer = useRef<number>(undefined as unknown as number);
 
-  // Auto-sync stored tool icons with the high-quality legacy SVGs
+  // Auto-sync icons with high-quality defaults
   useEffect(() => {
     let changed = false;
     const updated = tools.map(t => {
       const def = DEFAULT_AI_TOOLS.find(d => d.id === t.id);
-      if (def && def.icon !== t.icon) {
-        changed = true;
-        return { ...t, icon: def.icon };
-      }
+      if (def && def.icon !== t.icon) { changed = true; return { ...t, icon: def.icon }; }
       return t;
     });
-    if (changed) {
-      setTools(updated);
-    }
-  }, [tools, setTools]);
+    if (changed) setTools(updated);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const active = tools
+  const active = [...tools]
     .filter(t => t.pinned !== false)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
-  /* Ctrl+Space keyboard toggle */
+  // Ctrl+Space toggle
   useEffect(() => {
-    const h = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.code === 'Space') {
-        e.preventDefault();
-        setOpen(p => !p);
-      }
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.code === 'Space') { e.preventDefault(); setOpen(p => !p); }
     };
-    window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  const startOpen = () => {
-    clearTimeout(leaveRef.current);
-    enterRef.current = window.setTimeout(() => setOpen(true), 100);
+  const openWheel = () => {
+    clearTimeout(leaveTimer.current);
+    clearTimeout(enterTimer.current);
+    enterTimer.current = window.setTimeout(() => setOpen(true), 80);
   };
-  const scheduleClose = () => {
-    clearTimeout(enterRef.current);
-    leaveRef.current = window.setTimeout(() => {
+
+  const closeWheel = () => {
+    clearTimeout(enterTimer.current);
+    leaveTimer.current = window.setTimeout(() => {
       setOpen(false);
       setHovered(null);
       setDraggingId(null);
-    }, 500);
+      setDragOver(null);
+    }, 400);
   };
-  const cancelClose = () => clearTimeout(leaveRef.current);
 
-  /* radial math — right-facing semicircle */
-  const N = active.length;
-  const R = 200;           // radius
-  const PAD = 0.28;        // angular padding from top/bottom
-  const t0 = -Math.PI / 2 + PAD;
-  const t1 =  Math.PI / 2 - PAD;
-  // Semicircle center at CX=250, CY=250 in the 500x500 local container
-  const CX = 250, CY = 250;
+  const cancelClose = () => clearTimeout(leaveTimer.current);
 
-  /* unified drag-to-rearrange & click-to-open handler */
-  const handlePointerDown = (toolId: string, e: React.MouseEvent) => {
-    if (e.button !== 0) return; // Only left click drag
+  // Drag-to-reorder handlers
+  const handleDragStart = (id: string) => setDraggingId(id);
+  const handleDragOver = (idx: number) => setDragOver(idx);
+  const handleDrop = (targetIdx: number) => {
+    if (draggingId === null) return;
+    const fromIdx = active.findIndex(t => t.id === draggingId);
+    if (fromIdx === -1 || fromIdx === targetIdx) return;
+    const reordered = [...active];
+    const [moved] = reordered.splice(fromIdx, 1);
+    reordered.splice(targetIdx, 0, moved);
+    const updatedTools = tools.map(t => {
+      const newIdx = reordered.findIndex(r => r.id === t.id);
+      return newIdx !== -1 ? { ...t, order: newIdx } : t;
+    });
+    setTools(updatedTools);
+    setDraggingId(null);
+    setDragOver(null);
+  };
+
+  const handleClick = (tool: AITool, e: React.MouseEvent) => {
     e.preventDefault();
-    setDraggingId(toolId);
-    let hasDragged = false;
-
-    const onPointerMove = (moveEvent: PointerEvent) => {
-      hasDragged = true;
-      const centerY = window.innerHeight / 2;
-      const deltaX = moveEvent.clientX - 0; // screen left edge is x=0
-      const deltaY = moveEvent.clientY - centerY;
-
-      // Calculate current drag angle
-      const angle = Math.atan2(deltaY, deltaX);
-
-      // Compute preset angle slots
-      const presetAngles = active.map((t, idx) => {
-        const a = N > 1 ? t0 + (idx / (N - 1)) * (t1 - t0) : 0;
-        return { id: t.id, angle: a };
-      });
-
-      // Find the target index for the current drag angle
-      let targetIdx = 0;
-      for (let i = 0; i < presetAngles.length; i++) {
-        if (angle > presetAngles[i].angle) {
-          targetIdx = i + 1;
-        }
-      }
-      targetIdx = Math.max(0, Math.min(active.length - 1, targetIdx));
-
-      const currentIdx = active.findIndex(t => t.id === toolId);
-      if (currentIdx !== targetIdx && currentIdx !== -1) {
-        const reordered = [...active];
-        const [movedItem] = reordered.splice(currentIdx, 1);
-        reordered.splice(targetIdx, 0, movedItem);
-
-        // Update orders in the overall tools array
-        const updatedTools = tools.map(t => {
-          const newIndexInActive = reordered.findIndex(rt => rt.id === t.id);
-          if (newIndexInActive !== -1) {
-            return { ...t, order: newIndexInActive };
-          }
-          return t;
-        });
-        setTools(updatedTools);
-      }
-    };
-
-    const onPointerUp = () => {
-      setDraggingId(null);
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-
-      // If the user didn't drag the node, treat it as a click/launch navigation
-      if (!hasDragged) {
-        const clickedTool = tools.find(t => t.id === toolId);
-        if (clickedTool) {
-          const url = clickedTool.url;
-          if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
-            chrome.tabs.create({ url });
-          } else {
-            window.open(url, '_blank');
-          }
-        }
-      }
-    };
-
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('pointerup', onPointerUp);
+    if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
+      chrome.tabs.create({ url: tool.url });
+    } else {
+      window.open(tool.url, '_blank');
+    }
   };
+
+  // Semicircle math: nodes spread on a right-facing arc
+  // Panel: 280px wide, 560px tall, centered at (0, 50vh)
+  // Circle center: at (0, 280) in local space → screen (0, 50vh)
+  const N = active.length;
+  const R = 180;
+  const HALF_ARC = (Math.PI / 2) - 0.3; // total arc ±80° from horizontal
+  const panelH = 560;
+  const CX = 0;   // circle center at panel left edge
+  const CY = panelH / 2; // circle center at panel vertical center
 
   return (
     <>
-      {/* Invisible edge trigger strip */}
-      {settings.edgeActivation !== false && (
-        <div className={styles.edgeTrigger} onMouseEnter={startOpen} onMouseLeave={scheduleClose} />
-      )}
+      {/* ── Edge hover trigger — always rendered, always on top ── */}
+      <div
+        className={styles.trigger}
+        onMouseEnter={openWheel}
+        onMouseLeave={closeWheel}
+        role="button"
+        aria-label="Open AI tools"
+      />
 
       <AnimatePresence>
         {open && (
           <>
-            {/* Click-out backdrop */}
+            {/* Dismiss backdrop */}
             <motion.div
               className={styles.backdrop}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.18 }}
+              transition={{ duration: 0.15 }}
               onClick={() => setOpen(false)}
             />
 
-            {/* Semicircle panel slider */}
+            {/* Main panel — slides from left, transparent container */}
             <motion.div
               className={styles.panel}
-              initial={{ x: -300, y: '-50%' }}
-              animate={{ x: 0, y: '-50%' }}
-              exit={{ x: -300, y: '-50%' }}
-              transition={{ type: 'spring', stiffness: 270, damping: 28 }}
+              style={{ height: panelH }}
+              initial={{ x: -(R + 60) }}
+              animate={{ x: 0 }}
+              exit={{ x: -(R + 60) }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
               onMouseEnter={cancelClose}
-              onMouseLeave={scheduleClose}
+              onMouseLeave={closeWheel}
             >
-              {/* Glass circular container */}
-              <div className={styles.circle}>
-                {/* Center trigger node */}
-                <button className={styles.center} onClick={() => setOpen(false)}>
-                  <span>AI</span>
-                </button>
+              {/* NO disk — icons float freely */}
 
-                {/* Arc nodes */}
-                {active.map((tool, i) => {
-                  const angle = N > 1 ? t0 + (i / (N - 1)) * (t1 - t0) : 0;
-                  const x = CX + R * Math.cos(angle);
-                  const y = CY + R * Math.sin(angle);
-                  const isHov = hovered === tool.id;
-                  const isDragging = draggingId === tool.id;
+              {/* Center "AI" hub button */}
+              <button
+                className={styles.hub}
+                style={{ top: CY, left: CX }}
+                onClick={() => setOpen(false)}
+              >
+                AI
+              </button>
 
-                  return (
-                    <motion.div
-                      key={tool.id}
-                      className={styles.nodeWrap}
-                      style={{ left: x, top: y }}
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0, opacity: 0 }}
-                      transition={{ delay: i * 0.035, type: 'spring', stiffness: 340, damping: 26 }}
+              {/* Arc nodes */}
+              {active.map((tool, i) => {
+                const angle = N > 1
+                  ? -HALF_ARC + (i / (N - 1)) * (HALF_ARC * 2)
+                  : 0;
+                const nx = CX + R * Math.cos(angle);
+                const ny = CY + R * Math.sin(angle);
+                const isHov = hovered === tool.id;
+                const isDragging = draggingId === tool.id;
+                const isDragTarget = dragOver === i;
+
+                return (
+                  <motion.div
+                    key={tool.id}
+                    className={`${styles.nodeWrap} ${isDragging ? styles.dragging : ''} ${isDragTarget ? styles.dragTarget : ''}`}
+                    style={{ left: nx, top: ny }}
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    transition={{ delay: i * 0.04, type: 'spring', stiffness: 380, damping: 28 }}
+                    draggable
+                    onDragStart={() => handleDragStart(tool.id)}
+                    onDragOver={e => { e.preventDefault(); handleDragOver(i); }}
+                    onDrop={() => handleDrop(i)}
+                    onDragEnd={() => { setDraggingId(null); setDragOver(null); }}
+                  >
+                    <a
+                      href={tool.url}
+                      className={`${styles.node} ${isHov ? styles.nodeHovered : ''}`}
+                      onClick={e => handleClick(tool, e)}
+                      onMouseEnter={() => setHovered(tool.id)}
+                      onMouseLeave={() => setHovered(null)}
+                      title={tool.name}
+                      draggable={false}
                     >
-                      <a
-                        href={tool.url}
-                        className={`${styles.node} ${isHov ? styles.nodeHov : ''} ${isDragging ? styles.nodeDragging : ''}`}
-                        onMouseDown={e => handlePointerDown(tool.id, e)}
-                        onMouseEnter={() => setHovered(tool.id)}
-                        onMouseLeave={() => setHovered(null)}
-                        title={tool.name}
-                      >
-                        <span
-                          className={styles.icon}
-                          dangerouslySetInnerHTML={{ __html: tool.icon }}
-                        />
-                      </a>
-                      <AnimatePresence>
-                        {isHov && !isDragging && (
-                          <motion.span
-                            className={styles.label}
-                            initial={{ opacity: 0, x: -6 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -6 }}
-                            transition={{ duration: 0.12 }}
-                          >
-                            {tool.name}
-                          </motion.span>
-                        )}
-                      </AnimatePresence>
-                    </motion.div>
-                  );
-                })}
-              </div>
+                      <span
+                        className={styles.icon}
+                        dangerouslySetInnerHTML={{ __html: tool.icon }}
+                      />
+                    </a>
+
+                    {/* Hover tooltip */}
+                    <AnimatePresence>
+                      {isHov && (
+                        <motion.div
+                          className={styles.tooltip}
+                          initial={{ opacity: 0, x: -8 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -8 }}
+                          transition={{ duration: 0.1 }}
+                        >
+                          {tool.name}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                );
+              })}
             </motion.div>
           </>
         )}

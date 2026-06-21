@@ -5,7 +5,7 @@ import { DEFAULT_SETTINGS } from '../shared/defaults';
 import type { AppSettings } from '../shared/types';
 
 import Clock from './components/Clock/Clock';
-import AIWheel from './components/AIWheel/AIWheel';
+import AIDock from './components/AIDock/AIDock';
 import SearchBar from './components/SearchBar/SearchBar';
 import Dock from './components/Dock/Dock';
 import FocusStrip from './components/FocusCard/FocusStrip';
@@ -45,8 +45,8 @@ export default function App() {
         <TabIntelCard />
       </div>
 
-      {/* ── AI Wheel — left edge triggered ─────── */}
-      <AIWheel />
+      {/* ── AI Dock — left edge triggered ────────── */}
+      <AIDock />
 
       {/* ── Dock — bottom center ────────────────── */}
       <Dock />

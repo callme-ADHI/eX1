@@ -1,6 +1,6 @@
 import { storageGet, storageSet, KEYS } from '../shared/storage';
 import type { Task, ProductivityRollup, FocusSession, TabSnapshot } from '../shared/types';
-import { isProductive, isDistracting } from './tabEngine';
+import { isProductive, isDistracting } from '../shared/utils';
 
 // ─── Productivity Engine ──────────────────────────────────────────────────────
 

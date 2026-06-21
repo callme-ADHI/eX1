@@ -4,8 +4,9 @@ import { useStorage } from '../../hooks/useStorage';
 import { KEYS } from '../../../shared/storage';
 import { DEFAULT_DOCK_ITEMS } from '../../../shared/defaults';
 import type { DockItem, TabSnapshot } from '../../../shared/types';
-import { extractDomain } from '../../../background/tabEngine';
+import { extractDomain } from '../../../shared/utils';
 import styles from './Dock.module.css';
+import { IconRenderer } from '../IconRenderer';
 
 export default function Dock() {
   const [items, setItems] = useStorage<DockItem[]>(KEYS.DOCK_ITEMS, DEFAULT_DOCK_ITEMS);
@@ -37,7 +38,12 @@ export default function Dock() {
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItem) return;
-    const updated = items.map((t) => (t.id === editingItem.id ? editingItem : t));
+    let url = editingItem.url.trim();
+    if (!/^https?:\/\//i.test(url)) {
+      url = 'https://' + url;
+    }
+    const updatedItem = { ...editingItem, url };
+    const updated = items.map((t) => (t.id === editingItem.id ? updatedItem : t));
     setItems(updated);
     setEditingItem(null);
   };
@@ -51,11 +57,15 @@ export default function Dock() {
 
   const handleAddItemSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const domain = extractDomain(newItem.url);
+    let url = newItem.url.trim();
+    if (!/^https?:\/\//i.test(url)) {
+      url = 'https://' + url;
+    }
+    const domain = extractDomain(url);
     const item: DockItem = {
       id: `dock_${Date.now()}`,
       name: newItem.name,
-      url: newItem.url,
+      url: url,
       // Generic SVG fallback
       icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>`,
       order: items.length,
@@ -86,64 +96,72 @@ export default function Dock() {
   };
 
   return (
-    <div className={styles.dockWrapper}>
-      <div
-        className={`${styles.dockContainer} glass-card`}
-        onMouseLeave={() => setHoverIndex(null)}
-      >
-        {items
-          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-          .map((item, idx) => {
-            const domain = extractDomain(item.url);
-            const isActive = openDomains.has(domain);
+    <>
+      <div className={styles.dockWrapper}>
+        <div
+          className={`${styles.dockContainer} glass-card`}
+          onMouseLeave={() => setHoverIndex(null)}
+        >
+          {items
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+            .map((item, idx) => {
+              const domain = extractDomain(item.url);
+              const isActive = openDomains.has(domain);
 
-            // macOS scale computation
-            let scale = 1.0;
-            if (hoverIndex !== null) {
-              const diff = Math.abs(idx - hoverIndex);
-              if (diff === 0) scale = 1.4;
-              else if (diff === 1) scale = 1.2;
-              else if (diff === 2) scale = 1.05;
-            }
+              // macOS scale computation
+              let scale = 1.0;
+              let glowOpacity = 0;
+              if (hoverIndex !== null) {
+                const diff = Math.abs(idx - hoverIndex);
+                if (diff === 0) { scale = 1.4; glowOpacity = 0.35; }
+                else if (diff === 1) { scale = 1.2; glowOpacity = 0.18; }
+                else if (diff === 2) { scale = 1.05; glowOpacity = 0.06; }
+              }
 
-            return (
-              <div
-                key={item.id}
-                className={styles.itemWrapper}
-                onMouseEnter={() => setHoverIndex(idx)}
-                draggable
-                onDragStart={() => handleDragStart(idx)}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  handleDragOver(idx);
-                }}
-                onDragEnd={handleDragEnd}
-                style={{
-                  transform: `scale(${scale})`,
-                  transformOrigin: 'bottom center',
-                  zIndex: hoverIndex === idx ? 10 : 1,
-                }}
-              >
-                <a
-                  href={item.url}
-                  className={styles.dockItem}
-                  onClick={(e) => handleItemClick(item, e)}
-                  onContextMenu={(e) => handleContextMenu(item, e)}
-                  title={item.name}
+              return (
+                <div
+                  key={item.id}
+                  className={styles.itemWrapper}
+                  onMouseEnter={() => setHoverIndex(idx)}
+                  draggable
+                  onDragStart={() => handleDragStart(idx)}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    handleDragOver(idx);
+                  }}
+                  onDragEnd={handleDragEnd}
+                  style={{
+                    transform: `scale(${scale})`,
+                    transformOrigin: 'bottom center',
+                    zIndex: hoverIndex === idx ? 10 : 1,
+                  }}
                 >
-                  <span
-                    className={styles.icon}
-                    dangerouslySetInnerHTML={{ __html: item.icon }}
-                  />
-                  {isActive && <div className={styles.activeDot} />}
-                </a>
-              </div>
-            );
-          })}
+                  <a
+                    href={item.url}
+                    className={styles.dockItem}
+                    onClick={(e) => handleItemClick(item, e)}
+                    onContextMenu={(e) => handleContextMenu(item, e)}
+                    title={item.name}
+                    style={{
+                      boxShadow: glowOpacity > 0 
+                        ? `0 10px 25px color-mix(in srgb, var(--accent) ${glowOpacity * 100}%, transparent), 0 0 10px color-mix(in srgb, var(--accent) ${glowOpacity * 50}%, transparent)` 
+                        : undefined,
+                      borderColor: glowOpacity > 0
+                        ? `color-mix(in srgb, var(--accent) ${glowOpacity * 100}%, var(--border))`
+                        : undefined
+                    }}
+                  >
+                    <IconRenderer icon={item.icon} name={item.name} url={item.url} />
+                    {isActive && <div className={styles.activeDot} />}
+                  </a>
+                </div>
+              );
+            })}
 
-        <button onClick={() => setIsAdding(true)} className={styles.addBtn} title="Add Shortcut">
-          +
-        </button>
+          <button onClick={() => setIsAdding(true)} className={styles.addBtn} title="Add Shortcut">
+            +
+          </button>
+        </div>
       </div>
 
       {/* Edit modal */}
@@ -176,7 +194,7 @@ export default function Dock() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>URL</label>
                 <input
-                  type="url"
+                  type="text"
                   value={editingItem.url}
                   onChange={(e) => setEditingItem({ ...editingItem, url: e.target.value })}
                   style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '8px', color: 'var(--text-primary)' }}
@@ -227,8 +245,8 @@ export default function Dock() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>URL</label>
                 <input
-                  type="url"
-                  placeholder="https://..."
+                  type="text"
+                  placeholder="e.g. hackerrank.com"
                   value={newItem.url}
                   onChange={(e) => setNewItem({ ...newItem, url: e.target.value })}
                   style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '8px', color: 'var(--text-primary)' }}
@@ -247,6 +265,7 @@ export default function Dock() {
           </div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }
+

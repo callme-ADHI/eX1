@@ -5,6 +5,7 @@ import { KEYS } from '../../../shared/storage';
 import { DEFAULT_SETTINGS, DEFAULT_AI_TOOLS, DEFAULT_DOCK_ITEMS } from '../../../shared/defaults';
 import type { AppSettings, AITool, DockItem, ThemeId } from '../../../shared/types';
 import styles from './SettingsPanel.module.css';
+import { IconRenderer } from '../IconRenderer';
 
 const THEMES: { id: ThemeId; name: string; color: string }[] = [
   { id: 'platinum', name: 'Platinum', color: '#E5E7EB' },
@@ -18,6 +19,8 @@ const THEMES: { id: ThemeId; name: string; color: string }[] = [
 export default function SettingsPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'tools' | 'dock' | 'appearance' | 'shortcuts' | 'about'>('tools');
+  const [newToolName, setNewToolName] = useState('');
+  const [newToolUrl, setNewToolUrl] = useState('');
   const panelRef = useRef<HTMLDivElement>(null);
 
   const [settings, setSettings] = useStorage<AppSettings>(KEYS.SETTINGS, DEFAULT_SETTINGS);
@@ -112,7 +115,7 @@ export default function SettingsPanel() {
                   onClick={() => setActiveTab('tools')}
                   className={`${styles.tabBtn} ${activeTab === 'tools' ? styles.activeTab : ''}`}
                 >
-                  AI Tools
+                  AI Dock
                 </button>
                 <button
                   onClick={() => setActiveTab('dock')}
@@ -144,25 +147,106 @@ export default function SettingsPanel() {
               <div className={styles.content}>
                 {activeTab === 'tools' && (
                   <div className={styles.tabContent}>
-                    <div className={styles.sectionTitle}>AI WHEEL CONFIGURATION</div>
+                    <div className={styles.sectionTitle}>AI DOCK CONFIGURATION</div>
                     <div className={styles.scrollList}>
-                      {aiTools.map((tool) => (
+                      {aiTools.map((tool, idx) => (
                         <div key={tool.id} className={styles.editorRow}>
-                          <span className={styles.editorName}>{tool.name}</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const updated = aiTools.map((t) =>
-                                t.id === tool.id ? { ...t, pinned: !t.pinned } : t
-                              );
-                              setAiTools(updated);
-                            }}
-                            className={`${styles.toggleBtn} ${tool.pinned ? styles.toggleActive : ''}`}
-                          >
-                            {tool.pinned ? 'PINNED' : 'UNPINNED'}
-                          </button>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                            <IconRenderer icon={tool.icon} name={tool.name} url={tool.url} size={20} />
+                            <span className={styles.editorName}>{tool.name}</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = [...aiTools];
+                                if (idx > 0) { [updated[idx - 1], updated[idx]] = [updated[idx], updated[idx - 1]]; }
+                                setAiTools(updated.map((t, i) => ({ ...t, order: i })));
+                              }}
+                              className={styles.toggleBtn}
+                              style={{ padding: '2px 8px', fontSize: '10px' }}
+                              disabled={idx === 0}
+                            >↑</button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = [...aiTools];
+                                if (idx < updated.length - 1) { [updated[idx], updated[idx + 1]] = [updated[idx + 1], updated[idx]]; }
+                                setAiTools(updated.map((t, i) => ({ ...t, order: i })));
+                              }}
+                              className={styles.toggleBtn}
+                              style={{ padding: '2px 8px', fontSize: '10px' }}
+                              disabled={idx === aiTools.length - 1}
+                            >↓</button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = aiTools.map(t =>
+                                  t.id === tool.id ? { ...t, pinned: !t.pinned } : t
+                                );
+                                setAiTools(updated);
+                              }}
+                              className={`${styles.toggleBtn} ${tool.pinned ? styles.toggleActive : ''}`}
+                            >
+                              {tool.pinned ? 'ON' : 'OFF'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setAiTools(aiTools.filter(t => t.id !== tool.id))}
+                              className={styles.deleteBtn}
+                            >
+                              ✕
+                            </button>
+                          </div>
                         </div>
                       ))}
+                    </div>
+
+                    {/* Add new AI tool */}
+                    <div className={styles.dropdownDivider} style={{ margin: '14px 0 10px' }} />
+                    <div className={styles.sectionTitle}>ADD NEW TOOL</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <input
+                        type="text"
+                        placeholder="Tool name (e.g. Mistral)"
+                        value={newToolName}
+                        onChange={e => setNewToolName(e.target.value)}
+                        className={styles.textInput}
+                      />
+                      <input
+                        type="url"
+                        placeholder="URL (e.g. https://mistral.ai)"
+                        value={newToolUrl}
+                        onChange={e => setNewToolUrl(e.target.value)}
+                        className={styles.textInput}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!newToolName.trim() || !newToolUrl.trim()) return;
+                          let url = newToolUrl.trim();
+                          if (!/^https?:\/\//i.test(url)) {
+                            url = 'https://' + url;
+                          }
+                          const domain = url.replace(/^https?:\/\//i, '').split('/')[0].replace(/^www\./i, '');
+                          const faviconUrl = `https://www.google.com/s2/favicons?sz=64&domain=${domain}`;
+                          const newTool: AITool = {
+                            id: `custom_${Date.now()}`,
+                            name: newToolName.trim(),
+                            url: url,
+                            icon: faviconUrl,
+                            pinned: true,
+                            order: aiTools.length,
+                          };
+                          setAiTools([...aiTools, newTool]);
+                          setNewToolName('');
+                          setNewToolUrl('');
+                        }}
+                        className={styles.exportBtn}
+                        style={{ marginTop: '4px' }}
+                      >
+                        + ADD TO DOCK
+                      </button>
                     </div>
                   </div>
                 )}
@@ -241,6 +325,19 @@ export default function SettingsPanel() {
                         className={styles.slider}
                       />
                     </div>
+
+                    <div className={styles.fieldRow}>
+                      <label className={styles.fieldLabel}>ANIMATION SPEED</label>
+                      <select
+                        value={settings.animationSpeed || 'normal'}
+                        onChange={(e) => setSettings({ ...settings, animationSpeed: e.target.value as never })}
+                        className={styles.select}
+                      >
+                        <option value="fast">Fast (0.09s)</option>
+                        <option value="normal">Normal (0.15s)</option>
+                        <option value="slow">Slow (0.28s)</option>
+                      </select>
+                    </div>
                   </div>
                 )}
 
@@ -251,7 +348,7 @@ export default function SettingsPanel() {
                     <div className={styles.editorRow}>
                       <div>
                         <div className={styles.settingHeader}>LEFT EDGE ACTIVATE</div>
-                        <div className={styles.settingDesc}>Hover the screen's left edge to invoke the AI Wheel.</div>
+                        <div className={styles.settingDesc}>Hover the screen's left edge to open the AI Dock.</div>
                       </div>
                       <button
                         onClick={() => setSettings({ ...settings, edgeActivation: !settings.edgeActivation })}
@@ -262,7 +359,7 @@ export default function SettingsPanel() {
                     </div>
 
                     <div className={styles.fieldRow}>
-                      <label className={styles.fieldLabel}>AI WHEEL HOTKEY</label>
+                      <label className={styles.fieldLabel}>AI DOCK SHORTCUT</label>
                       <input
                         type="text"
                         value={settings.shortcut || 'Alt+Space'}

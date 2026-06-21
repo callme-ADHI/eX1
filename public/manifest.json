@@ -30,6 +30,9 @@
       "all_frames": false
     }
   ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
   "action": {
     "default_title": "eX1 Dashboard",
     "default_icon": "icon-128.png"
@@ -40,8 +43,8 @@
   "commands": {
     "toggle-wheel": {
       "suggested_key": {
-        "default": "Alt+Space",
-        "mac": "Alt+Space"
+        "default": "Ctrl+Space",
+        "mac": "Ctrl+Space"
       },
       "description": "Toggle the eX1 AI Wheel"
     }
