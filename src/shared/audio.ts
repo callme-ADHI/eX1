@@ -35,36 +35,29 @@ export function playTactileTick() {
     
     lastPlayTime = playTime;
     
-    // 1. Setup gain envelope for clean decay
+    // 1. Setup main gain at 100% maximum volume
     const mainGain = ctx.createGain();
-    mainGain.gain.setValueAtTime(0.85, playTime); // Increased from 0.18 for 100% audibility
+    mainGain.gain.setValueAtTime(1.0, playTime); 
     mainGain.connect(ctx.destination);
     
-    // 2. High-speed frequency sweep oscillator
+    // 2. High-speed frequency sweep oscillator using a punchy triangle wave
     const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(3800, playTime);
-    osc.frequency.exponentialRampToValueAtTime(1000, playTime + 0.007);
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(2000, playTime);
+    osc.frequency.exponentialRampToValueAtTime(150, playTime + 0.012);
     
-    // 3. Bandpass filter for a woody, physical casing timbre
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(1800, playTime);
-    filter.Q.setValueAtTime(3.5, playTime);
-    
-    // 4. Tight exponential gain decay
+    // 3. Tight exponential gain decay for a clean, sharp tactile click
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(1.0, playTime); // Set to max gain
-    gain.gain.exponentialRampToValueAtTime(0.001, playTime + 0.016); // Slightly longer decay for better speaker audibility
+    gain.gain.setValueAtTime(1.0, playTime); 
+    gain.gain.exponentialRampToValueAtTime(0.001, playTime + 0.014);
     
-    // Connections
-    osc.connect(filter);
-    filter.connect(gain);
+    // Direct connections to avoid filter attenuation
+    osc.connect(gain);
     gain.connect(mainGain);
     
     // Playback scheduling
     osc.start(playTime);
-    osc.stop(playTime + 0.025);
+    osc.stop(playTime + 0.02);
   } catch (err) {
     console.warn('Tactile tick audio failed to play:', err);
   }
