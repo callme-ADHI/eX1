@@ -1,6 +1,8 @@
 let audioCtx: AudioContext | null = null;
+let noiseBuffer: AudioBuffer | null = null;
 let lastPlayTime = 0;
-const MIN_TICK_GAP = 0.045; // 45ms minimum gap in seconds
+let tickIndex = 0;
+const MIN_TICK_GAP = 0.045;
 
 function getAudioContext(): AudioContext {
   if (!audioCtx) {
@@ -9,11 +11,18 @@ function getAudioContext(): AudioContext {
   return audioCtx;
 }
 
-/**
- * Plays a high-fidelity synthesized mechanical tick sound.
- * Uses a scheduling algorithm to pace the ticks rhythmically when sliding
- * across items quickly, mimicking a physical rotary notch selector.
- */
+function getNoiseBuffer(ctx: AudioContext): AudioBuffer {
+  if (!noiseBuffer) {
+    const length = Math.ceil(ctx.sampleRate * 0.05);
+    noiseBuffer = ctx.createBuffer(1, length, ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < length; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+  }
+  return noiseBuffer;
+}
+
 export function playTactileTick() {
   try {
     const ctx = getAudioContext();
@@ -21,43 +30,68 @@ export function playTactileTick() {
       ctx.resume();
     }
     const now = ctx.currentTime;
-    
-    // Pace-limiting algorithm: if triggers are too close, queue them up
-    // at perfect MIN_TICK_GAP intervals.
+
     let playTime = now;
     if (now - lastPlayTime < MIN_TICK_GAP) {
       playTime = lastPlayTime + MIN_TICK_GAP;
-      // Discard ticks that queue up too far in the future to keep audio tight with interaction
       if (playTime - now > 0.15) {
         return;
       }
     }
-    
+
+    const isSingleHover = now - lastPlayTime > 0.25;
     lastPlayTime = playTime;
-    
-    // 1. Setup main gain at 25x volume
-    const mainGain = ctx.createGain();
-    mainGain.gain.setValueAtTime(25.0, playTime); 
-    mainGain.connect(ctx.destination);
-    
-    // 2. High-speed frequency sweep oscillator using a bright sawtooth wave for max presence
-    const osc = ctx.createOscillator();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(2000, playTime);
-    osc.frequency.exponentialRampToValueAtTime(150, playTime + 0.012);
-    
-    // 3. Tight exponential gain decay for a clean, sharp tactile click
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(1.0, playTime); 
-    gain.gain.exponentialRampToValueAtTime(0.001, playTime + 0.014);
-    
-    // Direct connections to avoid filter attenuation
-    osc.connect(gain);
-    gain.connect(mainGain);
-    
-    // Playback scheduling
-    osc.start(playTime);
-    osc.stop(playTime + 0.02);
+    tickIndex = isSingleHover ? 0 : tickIndex + 1;
+
+    const pitchStep = 1 + ((tickIndex % 5) - 2) * 0.015;
+    const jitter = 0.99 + Math.random() * 0.02;
+
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(isSingleHover ? 0.5 : 0.36, playTime);
+    masterGain.connect(ctx.destination);
+
+    const noiseDuration = isSingleHover ? 0.022 : 0.010;
+    const bodyDuration = isSingleHover ? 0.05 : 0.022;
+    const attack = 0.002;
+
+    // 1. Transient: pushed up to 3400/3800Hz — brighter, more "tick"-like crack
+    const noiseSrc = ctx.createBufferSource();
+    noiseSrc.buffer = getNoiseBuffer(ctx);
+
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = 'bandpass';
+    noiseFilter.frequency.setValueAtTime((isSingleHover ? 3400 : 3800) * pitchStep * jitter, playTime);
+    noiseFilter.Q.value = 1.1;
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.0001, playTime);
+    noiseGain.gain.linearRampToValueAtTime(0.5, playTime + attack); // slightly louder — leads the sound
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, playTime + noiseDuration);
+
+    noiseSrc.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(masterGain);
+
+    // 2. Body: raised an octave-ish, shallow sweep — adds weight without a "tock" fall
+    const bodyOsc = ctx.createOscillator();
+    bodyOsc.type = 'sine';
+    const bodyFreq = (isSingleHover ? 1050 : 1250) * pitchStep * jitter;
+    bodyOsc.frequency.setValueAtTime(bodyFreq, playTime);
+    bodyOsc.frequency.exponentialRampToValueAtTime(bodyFreq * 0.85, playTime + bodyDuration); // shallower fall
+
+    const bodyGain = ctx.createGain();
+    bodyGain.gain.setValueAtTime(0.0001, playTime);
+    bodyGain.gain.linearRampToValueAtTime(0.38, playTime + attack); // pulled back — supports, doesn't lead
+    bodyGain.gain.exponentialRampToValueAtTime(0.0001, playTime + bodyDuration);
+
+    bodyOsc.connect(bodyGain);
+    bodyGain.connect(masterGain);
+
+    noiseSrc.start(playTime);
+    noiseSrc.stop(playTime + noiseDuration + 0.01);
+
+    bodyOsc.start(playTime);
+    bodyOsc.stop(playTime + bodyDuration + 0.01);
   } catch (err) {
     console.warn('Tactile tick audio failed to play:', err);
   }
