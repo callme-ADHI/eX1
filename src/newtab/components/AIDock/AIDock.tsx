@@ -6,6 +6,7 @@ import { DEFAULT_AI_TOOLS, DEFAULT_SETTINGS } from '../../../shared/defaults';
 import type { AITool, AppSettings } from '../../../shared/types';
 import styles from './AIDock.module.css';
 import { IconRenderer } from '../IconRenderer';
+import { playTactileTick } from '../../../shared/audio';
 
 const TRIGGER_ZONE = 32;
 const CLOSE_ZONE   = 260;
@@ -134,7 +135,10 @@ export default function AIDock() {
                   <div
                     key={tool.id}
                     className={styles.itemWrapper}
-                    onMouseEnter={() => setHoverIndex(idx)}
+                    onMouseEnter={() => {
+                      setHoverIndex(idx);
+                      playTactileTick();
+                    }}
                     draggable
                     onDragStart={() => handleDragStart(idx)}
                     onDragOver={e => { e.preventDefault(); handleDragOver(idx); }}

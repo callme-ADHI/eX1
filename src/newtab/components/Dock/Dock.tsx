@@ -7,6 +7,7 @@ import type { DockItem, TabSnapshot } from '../../../shared/types';
 import { extractDomain } from '../../../shared/utils';
 import styles from './Dock.module.css';
 import { IconRenderer } from '../IconRenderer';
+import { playTactileTick } from '../../../shared/audio';
 
 export default function Dock() {
   const [items, setItems] = useStorage<DockItem[]>(KEYS.DOCK_ITEMS, DEFAULT_DOCK_ITEMS);
@@ -122,7 +123,10 @@ export default function Dock() {
                 <div
                   key={item.id}
                   className={styles.itemWrapper}
-                  onMouseEnter={() => setHoverIndex(idx)}
+                  onMouseEnter={() => {
+                    setHoverIndex(idx);
+                    playTactileTick();
+                  }}
                   draggable
                   onDragStart={() => handleDragStart(idx)}
                   onDragOver={(e) => {
@@ -158,7 +162,12 @@ export default function Dock() {
               );
             })}
 
-          <button onClick={() => setIsAdding(true)} className={styles.addBtn} title="Add Shortcut">
+          <button
+            onClick={() => setIsAdding(true)}
+            className={styles.addBtn}
+            title="Add Shortcut"
+            onMouseEnter={playTactileTick}
+          >
             +
           </button>
         </div>
