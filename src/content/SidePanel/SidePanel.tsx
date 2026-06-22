@@ -28,28 +28,26 @@ export default function SidePanel({ container }: Props) {
 
   // ── Force container to the RIGHT side once, on mount ──────────────────
   useEffect(() => {
-    Object.assign(container.style, {
-      position: 'fixed',
-      top: '0',
-      right: '0',
-      left: 'auto',       // override any leftover left:0 from the AI wheel setup
-      height: '100vh',
-      width: '8px',
-      zIndex: '2147483647',
-      pointerEvents: 'auto',
-      background: 'transparent',
-      overflow: 'visible',
-    });
+    container.style.setProperty('position', 'fixed', 'important');
+    container.style.setProperty('top', '0', 'important');
+    container.style.setProperty('right', '0', 'important');
+    container.style.setProperty('left', 'auto', 'important');
+    container.style.setProperty('height', '100vh', 'important');
+    container.style.setProperty('width', '8px', 'important');
+    container.style.setProperty('z-index', '2147483647', 'important');
+    container.style.setProperty('pointer-events', 'auto', 'important');
+    container.style.setProperty('background', 'transparent', 'important');
+    container.style.setProperty('overflow', 'visible', 'important');
   }, [container]);
 
   // ── Sync container size + hit-test when open state changes ────────────
   useEffect(() => {
     if (open) {
-      container.style.width = '300px';
-      container.style.pointerEvents = 'auto';
+      container.style.setProperty('width', '300px', 'important');
+      container.style.setProperty('pointer-events', 'auto', 'important');
     } else {
-      container.style.width = '8px';
-      container.style.pointerEvents = 'auto';
+      container.style.setProperty('width', '8px', 'important');
+      container.style.setProperty('pointer-events', 'auto', 'important');
     }
   }, [open, container]);
 

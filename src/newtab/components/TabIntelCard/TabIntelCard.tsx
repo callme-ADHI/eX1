@@ -28,6 +28,8 @@ export default function TabIntelCard() {
   const [analysis] = useStorage<WeeklyTabAnalysis | null>(KEYS.WEEK_ANALYSIS, null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTabSub, setActiveTabSub] = useState<'week' | 'active'>('week');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [visibleTabsCount, setVisibleTabsCount] = useState(8);
 
   const hasValidSnap = !!(snap && Array.isArray(snap.tabs) && snap.byCategory && snap.topDomains);
   const hasValidAnalysis = !!(analysis && Array.isArray(analysis.topDomains) && Array.isArray(analysis.categoryBreakdown));
@@ -212,45 +214,126 @@ export default function TabIntelCard() {
 
               {activeTabSub === 'active' && (
                 <>
-                  <div className={styles.subTitle}>ACTIVE TAB TELEMETRY</div>
-                  <div className={styles.tabList}>
-                    {snap.tabs.map((t) => {
-                      if (!t) return null;
-                      const verdict = getSecurityVerdict(t.domain || '');
-                      return (
-                        <div key={t.tabId} className={styles.tabRow}>
-                          <div className={styles.tabMetaCol}>
-                            <div className={styles.tabTitle} title={t.title || ''}>{t.title || 'New Tab'}</div>
-                            <div className={styles.tabDomainGroup}>
-                              <span className={styles.tabDomain}>{t.domain || 'system'}</span>
-                              <span className={`${styles.verdictBadge} ${getVerdictClass(verdict)}`}>
-                                {verdict.toUpperCase()}
-                              </span>
-                            </div>
-                            <div className={styles.timeGroup}>
-                              <span className={styles.timeLabel}>Clock:</span>
-                              <span className={styles.timeVal}>{formatClockTime(t.openedAt || Date.now())}</span>
-                              <span className={styles.divider}>·</span>
-                              <span className={styles.timeLabel}>Usage:</span>
-                              <span className={styles.timeVal}>{formatDuration(t.activeDurationMs || 0)}</span>
-                            </div>
-                          </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div className={styles.subTitle}>ACTIVE TAB TELEMETRY</div>
+                    {snap.tabs.length > 8 && (
+                      <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontWeight: 600 }}>
+                        Showing {Math.min(visibleTabsCount, snap.tabs.length)} of {snap.totalTabs}
+                      </span>
+                    )}
+                  </div>
 
-                          {/* Counts / Permissions panel */}
-                          <div className={styles.permissionsCol}>
-                            <div className={styles.permIndicator} title="Camera accesses" style={{ color: (t.cameraAccessCount ?? 0) > 0 ? '#22c55e' : 'rgba(255,255,255,0.2)' }}>
-                              🎥 <span>{t.cameraAccessCount ?? 0}</span>
-                            </div>
-                            <div className={styles.permIndicator} title="Microphone accesses" style={{ color: (t.micAccessCount ?? 0) > 0 ? '#22c55e' : 'rgba(255,255,255,0.2)' }}>
-                              🎙️ <span>{t.micAccessCount ?? 0}</span>
-                            </div>
-                            <div className={styles.permIndicator} title="Network fetch calls" style={{ color: (t.fetchCount ?? 0) > 0 ? '#00ffd2' : 'rgba(255,255,255,0.2)' }}>
-                              ⚡ <span>{t.fetchCount ?? 0}</span>
-                            </div>
-                          </div>
-                        </div>
+                  {/* Search box for filtering when many tabs are open */}
+                  <div style={{ marginBottom: '10px' }}>
+                    <input
+                      type="text"
+                      placeholder="Search tabs by title or domain..."
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setVisibleTabsCount(8); // Reset pagination count on search
+                      }}
+                      style={{
+                        width: '100%',
+                        background: 'rgba(255, 255, 255, 0.02)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        borderRadius: '6px',
+                        padding: '6px 10px',
+                        color: '#fff',
+                        fontSize: '11px',
+                        outline: 'none',
+                        transition: 'all 0.15s ease',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+
+                  <div className={styles.tabList}>
+                    {(() => {
+                      const filtered = snap.tabs.filter((t) => {
+                        if (!t) return false;
+                        const q = searchQuery.toLowerCase().trim();
+                        if (!q) return true;
+                        return (
+                          (t.title || '').toLowerCase().includes(q) ||
+                          (t.domain || '').toLowerCase().includes(q)
+                        );
+                      });
+
+                      // Sort by activeDurationMs descending (most active tabs first)
+                      const sorted = [...filtered].sort(
+                        (a, b) => (b.activeDurationMs || 0) - (a.activeDurationMs || 0)
                       );
-                    })}
+
+                      const paginated = sorted.slice(0, visibleTabsCount);
+
+                      if (sorted.length === 0) {
+                        return <div className={styles.empty}>No tabs matching your search.</div>;
+                      }
+
+                      return (
+                        <>
+                          {paginated.map((t) => {
+                            if (!t) return null;
+                            const verdict = getSecurityVerdict(t.domain || '');
+                            return (
+                              <div key={t.tabId} className={styles.tabRow}>
+                                <div className={styles.tabMetaCol}>
+                                  <div className={styles.tabTitle} title={t.title || ''}>{t.title || 'New Tab'}</div>
+                                  <div className={styles.tabDomainGroup}>
+                                    <span className={styles.tabDomain}>{t.domain || 'system'}</span>
+                                    <span className={`${styles.verdictBadge} ${getVerdictClass(verdict)}`}>
+                                      {verdict.toUpperCase()}
+                                    </span>
+                                  </div>
+                                  <div className={styles.timeGroup}>
+                                    <span className={styles.timeLabel}>Clock:</span>
+                                    <span className={styles.timeVal}>{formatClockTime(t.openedAt || Date.now())}</span>
+                                    <span className={styles.divider}>·</span>
+                                    <span className={styles.timeLabel}>Usage:</span>
+                                    <span className={styles.timeVal}>{formatDuration(t.activeDurationMs || 0)}</span>
+                                  </div>
+                                </div>
+
+                                {/* Counts / Permissions panel */}
+                                <div className={styles.permissionsCol}>
+                                  <div className={styles.permIndicator} title="Camera accesses" style={{ color: (t.cameraAccessCount ?? 0) > 0 ? '#22c55e' : 'rgba(255,255,255,0.2)' }}>
+                                    🎥 <span>{t.cameraAccessCount ?? 0}</span>
+                                  </div>
+                                  <div className={styles.permIndicator} title="Microphone accesses" style={{ color: (t.micAccessCount ?? 0) > 0 ? '#22c55e' : 'rgba(255,255,255,0.2)' }}>
+                                    🎙️ <span>{t.micAccessCount ?? 0}</span>
+                                  </div>
+                                  <div className={styles.permIndicator} title="Network fetch calls" style={{ color: (t.fetchCount ?? 0) > 0 ? '#00ffd2' : 'rgba(255,255,255,0.2)' }}>
+                                    ⚡ <span>{t.fetchCount ?? 0}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          {sorted.length > visibleTabsCount && (
+                            <button
+                              onClick={() => setVisibleTabsCount((prev) => prev + 10)}
+                              style={{
+                                width: '100%',
+                                background: 'rgba(0, 255, 210, 0.06)',
+                                border: '1px solid rgba(0, 255, 210, 0.2)',
+                                color: '#00ffd2',
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                padding: '8px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                marginTop: '4px',
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              SHOW MORE TABS (+{sorted.length - visibleTabsCount} remaining)
+                            </button>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
 
                   {/* Duplicate alerts */}

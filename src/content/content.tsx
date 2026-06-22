@@ -17,16 +17,15 @@ function init() {
 
   const container = document.createElement('div');
   container.id = 'ex1-hud-sidepanel-root';
-  Object.assign(container.style, {
-    position: 'fixed',
-    right: '0',
-    top: '0',
-    height: '100vh',
-    width: '15px', // initial trigger strip width
-    zIndex: '2147483647',
-    pointerEvents: 'auto',
-    background: 'rgba(0, 0, 0, 0.01)', // ensure compositor hit-testing works on all platforms
-  });
+  container.style.setProperty('position', 'fixed', 'important');
+  container.style.setProperty('right', '0', 'important');
+  container.style.setProperty('top', '0', 'important');
+  container.style.setProperty('height', '100vh', 'important');
+  container.style.setProperty('width', '8px', 'important');
+  container.style.setProperty('z-index', '2147483647', 'important');
+  container.style.setProperty('pointer-events', 'auto', 'important');
+  container.style.setProperty('background', 'transparent', 'important');
+  container.style.setProperty('display', 'block', 'important');
 
   const shadowRoot = container.attachShadow({ mode: 'open' });
 
