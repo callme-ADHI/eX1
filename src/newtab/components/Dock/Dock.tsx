@@ -19,6 +19,36 @@ export default function Dock() {
   const [isAdding, setIsAdding] = useState(false);
   const [newItem, setNewItem] = useState({ name: '', url: '' });
 
+  // Self-healing migration to ensure TryHackMe and Telegram are present
+  useEffect(() => {
+    if (items && items.length > 0) {
+      let changed = false;
+      const updated = [...items];
+      
+      const hasTryHackMe = items.some(t => t.url && t.url.includes('tryhackme.com'));
+      if (!hasTryHackMe) {
+        const defTry = DEFAULT_DOCK_ITEMS.find(d => d.id === 'tryhackme');
+        if (defTry) {
+          updated.push({ ...defTry, order: updated.length });
+          changed = true;
+        }
+      }
+      
+      const hasTelegram = items.some(t => t.url && (t.url.includes('telegram.org') || t.url.includes('t.me')));
+      if (!hasTelegram) {
+        const defTel = DEFAULT_DOCK_ITEMS.find(d => d.id === 'telegram');
+        if (defTel) {
+          updated.push({ ...defTel, order: updated.length });
+          changed = true;
+        }
+      }
+      
+      if (changed) {
+        setItems(updated);
+      }
+    }
+  }, [items, setItems]);
+
   // Compute which items match open tabs (active domains)
   const openDomains = new Set(snapshot?.tabs.map((t) => t.domain) ?? []);
 

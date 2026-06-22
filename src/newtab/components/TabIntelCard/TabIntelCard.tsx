@@ -36,38 +36,46 @@ export default function TabIntelCard() {
   const dupes = hasValidSnap ? (snap.duplicates?.reduce((n, d) => n + (d?.tabIds?.length ?? 1) - 1, 0) ?? 0) : 0;
 
   const closeDupes = async (tabIds: number[]) => {
+    if (!Array.isArray(tabIds)) return;
     const [, ...toClose] = tabIds;
     if (toClose.length) await sendMessage({ type: 'CLOSE_TABS', tabIds: toClose });
   };
 
-  const formatClockTime = (ts: number) => {
+  const formatClockTime = (ts: any) => {
+    if (!ts || isNaN(new Date(ts).getTime())) return 'N/A';
     const dateObj = new Date(ts);
-    const diffMs = Date.now() - ts;
+    const diffMs = Date.now() - dateObj.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     
-    const timeStr = dateObj.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-    
-    if (diffDays <= 0) {
-      return timeStr;
-    } else if (diffDays === 1) {
-      return `${timeStr} (Yesterday)`;
-    } else {
-      return `${timeStr} (${diffDays}d ago)`;
+    try {
+      const timeStr = dateObj.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+      if (diffDays <= 0) {
+        return timeStr;
+      } else if (diffDays === 1) {
+        return `${timeStr} (Yesterday)`;
+      } else {
+        return `${timeStr} (${diffDays}d ago)`;
+      }
+    } catch {
+      return 'N/A';
     }
   };
 
-  const formatDuration = (ms: number) => {
-    const s = Math.floor(ms / 1000);
+  const formatDuration = (ms: any) => {
+    const val = Number(ms);
+    if (isNaN(val) || val <= 0) return '0s';
+    const s = Math.floor(val / 1000);
     const m = Math.floor(s / 60);
     if (m > 0) return `${m}m ${s % 60}s`;
     return `${s}s`;
   };
 
   const getSecurityVerdict = (domain: string): string => {
-    if (!securityCache) return 'Unknown';
+    if (!securityCache || typeof securityCache !== 'object') return 'Unknown';
     const match = securityCache[`https://${domain}`] || securityCache[`http://${domain}`] || securityCache[domain];
     if (!match) return 'Unknown';
-    return match.verdict || match.riskLevel || 'Unknown';
+    const v = match.verdict || match.riskLevel || 'Unknown';
+    return typeof v === 'string' ? v : 'Unknown';
   };
 
   const getVerdictClass = (verdict: string) => {
@@ -284,7 +292,7 @@ export default function TabIntelCard() {
                                   <div className={styles.tabDomainGroup}>
                                     <span className={styles.tabDomain}>{t.domain || 'system'}</span>
                                     <span className={`${styles.verdictBadge} ${getVerdictClass(verdict)}`}>
-                                      {verdict.toUpperCase()}
+                                      {verdict ? String(verdict).toUpperCase() : 'UNKNOWN'}
                                     </span>
                                   </div>
                                   <div className={styles.timeGroup}>

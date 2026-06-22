@@ -150,3 +150,15 @@ async function handleMessage(msg: Message, sender: chrome.runtime.MessageSender)
       throw new Error(`Unknown message type: ${(msg as Message).type}`);
   }
 }
+
+// ─── Keyboard Commands Listener ───────────────────────────────────────────────
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command === 'toggle-wheel') {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab?.id) {
+      chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_HUD' }).catch(() => {
+        // Ignore error if content script is not loaded
+      });
+    }
+  }
+});

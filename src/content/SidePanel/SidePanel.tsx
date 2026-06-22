@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { FocusSession } from '../../shared/types';
+import { KEYS } from '../../shared/storage';
 import FocusGlance from './FocusGlance';
 import SecurityGlance from './SecurityGlance';
 
@@ -56,17 +57,46 @@ export default function SidePanel({ container }: Props) {
     setCurrentOrigin(window.location.origin);
 
     const read = () =>
-      chrome.storage.local.get('ex1:currentSession', (res) =>
-        setCurrentSession((res['ex1:currentSession'] as FocusSession) ?? null)
+      chrome.storage.local.get(KEYS.CURRENT_SESSION, (res) =>
+        setCurrentSession((res[KEYS.CURRENT_SESSION] as FocusSession) ?? null)
       );
     read();
 
     const onChange = (changes: Record<string, chrome.storage.StorageChange>) => {
-      if ('ex1:currentSession' in changes)
-        setCurrentSession((changes['ex1:currentSession'].newValue as FocusSession) ?? null);
+      if (KEYS.CURRENT_SESSION in changes)
+        setCurrentSession((changes[KEYS.CURRENT_SESSION].newValue as FocusSession) ?? null);
     };
     chrome.storage.onChanged.addListener(onChange);
     return () => chrome.storage.onChanged.removeListener(onChange);
+  }, []);
+
+  // ── Keyboard Shortcut & Messages (Ctrl+Space) ──────────────────────────
+  useEffect(() => {
+    const handleMsg = (msg: any) => {
+      if (msg.type === 'TOGGLE_HUD') {
+        setOpen(prev => !prev);
+      }
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && (e.key === ' ' || e.code === 'Space')) {
+        e.preventDefault();
+        e.stopPropagation();
+        setOpen(prev => !prev);
+      }
+    };
+
+    if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
+      chrome.runtime.onMessage.addListener(handleMsg);
+    }
+    window.addEventListener('keydown', onKeyDown, { capture: true });
+
+    return () => {
+      if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
+        chrome.runtime.onMessage.removeListener(handleMsg);
+      }
+      window.removeEventListener('keydown', onKeyDown, { capture: true });
+    };
   }, []);
 
   // ── Mouse tracking — registered ONCE, reads state via ref ────────────
