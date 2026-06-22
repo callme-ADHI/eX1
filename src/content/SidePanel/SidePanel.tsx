@@ -163,10 +163,12 @@ export default function SidePanel({ container }: Props) {
               WebkitBackdropFilter: 'blur(24px)',
               borderLeft: '1px solid rgba(255,255,255,0.07)',
               overflow: 'hidden',
+              color: '#e8e8f0',
+              fontFamily: "'Inter', 'IBM Plex Mono', system-ui, sans-serif",
             }}
           >
             {/* ── Top half: Focus timer ── */}
-            <div style={{ flex: 1, padding: '20px 16px 12px', overflow: 'hidden' }}>
+            <div style={{ flex: 1, padding: '20px 16px 12px', overflowY: 'auto' }}>
               <FocusGlance session={currentSession} />
             </div>
 
@@ -179,7 +181,7 @@ export default function SidePanel({ container }: Props) {
             }} />
 
             {/* ── Bottom half: Security ── */}
-            <div style={{ flex: 1, padding: '12px 16px 20px', overflow: 'hidden' }}>
+            <div style={{ flex: 1, padding: '12px 16px 20px', overflowY: 'auto' }}>
               <SecurityGlance origin={currentOrigin} />
             </div>
 
