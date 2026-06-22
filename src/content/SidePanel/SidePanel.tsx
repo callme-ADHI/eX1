@@ -34,9 +34,9 @@ export default function SidePanel({ container }: Props) {
       right: '0',
       left: 'auto',       // override any leftover left:0 from the AI wheel setup
       height: '100vh',
-      width: '6px',
+      width: '8px',
       zIndex: '2147483647',
-      pointerEvents: 'none',
+      pointerEvents: 'auto',
       background: 'transparent',
       overflow: 'visible',
     });
@@ -46,10 +46,10 @@ export default function SidePanel({ container }: Props) {
   useEffect(() => {
     if (open) {
       container.style.width = '300px';
-      container.style.pointerEvents = 'all';
+      container.style.pointerEvents = 'auto';
     } else {
-      container.style.width = '6px';
-      container.style.pointerEvents = 'none';
+      container.style.width = '8px';
+      container.style.pointerEvents = 'auto';
     }
   }, [open, container]);
 
@@ -114,17 +114,24 @@ export default function SidePanel({ container }: Props) {
       if (openRef.current) scheduleClose();
     };
 
-    // capture: true so we see events even if the host page calls stopPropagation
-    // passive: true so we never block scrolling
+    const onContainerEnter = () => {
+      if (!openRef.current) {
+        clearClose();
+        setOpen(true);
+      }
+    };
+
+    container.addEventListener('mouseenter', onContainerEnter);
     window.addEventListener('mousemove', onMouseMove, { capture: true, passive: true });
     document.addEventListener('mouseleave', onMouseLeave);
 
     return () => {
+      container.removeEventListener('mouseenter', onContainerEnter);
       window.removeEventListener('mousemove', onMouseMove, { capture: true });
       document.removeEventListener('mouseleave', onMouseLeave);
       clearClose();
     };
-  }, []); // ← empty — safe because we use openRef, not open
+  }, [container]);
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>

@@ -54,7 +54,7 @@ function init() {
   mountPoint.style.height = '100%';
   shadowRoot.appendChild(mountPoint);
 
-  document.body.appendChild(container);
+  document.documentElement.appendChild(container);
 
   const reactRoot = createRoot(mountPoint);
   reactRoot.render(
