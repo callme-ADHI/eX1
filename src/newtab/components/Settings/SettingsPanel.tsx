@@ -14,6 +14,10 @@ const THEMES: { id: ThemeId; name: string; color: string }[] = [
   { id: 'gold', name: 'Gold', color: '#C9A24B' },
   { id: 'emerald', name: 'Emerald', color: '#1E8F5E' },
   { id: 'violet', name: 'Violet', color: '#7C5CFF' },
+  { id: 'cyber-aqua', name: 'Cyber Aqua', color: '#00FFD2' },
+  { id: 'neon-tokyo', name: 'Neon Tokyo', color: '#FF007F' },
+  { id: 'solar-flare', name: 'Solar Flare', color: '#FF5E00' },
+  { id: 'electric-violet', name: 'Electric Violet', color: '#8B5CF6' },
 ];
 
 export default function SettingsPanel() {

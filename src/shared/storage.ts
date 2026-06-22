@@ -12,6 +12,7 @@ export const KEYS = {
   ROLLUP_MONTHLY:    'productivity:rollup:monthly',
   TAB_SNAPSHOT:      'tabs:snapshot',
   SECURITY_CACHE:    'security:reports',   // object keyed by origin
+  WEEK_ANALYSIS:     'tabs:weekanalysis',
 } as const;
 
 const isExtension = typeof chrome !== 'undefined' && !!chrome.storage && !!chrome.storage.local;

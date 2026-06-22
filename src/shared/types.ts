@@ -28,25 +28,93 @@ export interface TabRecord {
   activeDurationMs: number;
   visitCount: number;
   category: string;
+  description?: string;
+  ogType?: string;
+  cameraAccessCount?: number;
+  micAccessCount?: number;
+  fetchCount?: number;
 }
 
 export interface SecurityReport {
   origin: string;
-  riskLevel: RiskLevel;
-  domainAgeDays: number | null;
+  generatedAt: number;
+
+  // Connection
   https: boolean;
+  certValid: boolean;
   certIssuer: string | null;
   certExpiresAt: number | null;
+
+  // IP + Hosting
+  ip: string | null;
+  isp: string | null;
+  org: string | null;             // hosting company — display as HOSTING
+  asn: string | null;
+  country: string | null;
+  region: string | null;
+  city: string | null;
+
+  // Domain intel
+  domain: string;
+  ageDays: number | null;
+  ageYears: string | null;        // "7.9 years"
+  registeredAt: string | null;    // ISO date
+  expiresAt: string | null;
+  registrar: string | null;
+  nameservers: string[];
+
+  // Heuristics
   flags: string[];
-  permissions: {
-    camera: string;
-    microphone: string;
-    geolocation: string;
-    notifications: string;
-    clipboard: string;
-    popups: string;
-  };
+
+  // Permissions (filled by content script)
+  permissions: Record<string, 'granted' | 'denied' | 'prompt' | 'unavailable'>;
+  cameraActive: boolean;
+  micActive: boolean;
+
+  // Score
+  safetyIndex: number;
+  verdict: 'Safe' | 'Medium Risk' | 'High Risk';
+  
+  // Legacy support compatibility
+  riskLevel?: RiskLevel;
+  resolvedIp?: string;
+  hostingLocation?: string;
+}
+
+export interface TabEntry {
+  domain: string;
+  url: string;
+  title: string;
+  startTime: number;
+  endTime: number;
+  durationMs: number;
+  category: string;
+  date: string; // YYYY-MM-DD
+}
+
+export interface WeeklyTabAnalysis {
   generatedAt: number;
+  totalDomains: number;
+  totalSessionTime: string;
+  topDomains: {
+    domain: string;
+    visits: number;
+    durationMs: number;
+    durationFormatted: string;
+    category: string;
+  }[];
+  categoryBreakdown: {
+    category: string;
+    durationMs: number;
+    durationFormatted: string;
+    percentage: number;
+  }[];
+  dailyActivity: Record<string, number>;
+  mostProductiveDay: string | null;
+  productiveMs: number;
+  distractingMs: number;
+  productiveFormatted: string;
+  distractingFormatted: string;
 }
 
 export interface ProductivityFactor {
@@ -107,7 +175,7 @@ export interface DockItem {
 export type ClockStyle = "analog" | "digital";
 export type ClockMode = "12h" | "24h";
 export type AnimationSpeed = "fast" | "normal" | "slow";
-export type ThemeId = "platinum" | "sapphire" | "crimson" | "gold" | "emerald" | "violet";
+export type ThemeId = "platinum" | "sapphire" | "crimson" | "gold" | "emerald" | "violet" | "cyber-aqua" | "neon-tokyo" | "solar-flare" | "electric-violet";
 
 export interface AppSettings {
   theme: ThemeId;

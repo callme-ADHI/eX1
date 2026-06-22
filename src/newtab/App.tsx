@@ -39,8 +39,8 @@ export default function App() {
         <SearchBar />
       </div>
 
-      {/* ── Productivity + Tab cards — right col ── */}
-      <div className={styles.cardsArea}>
+      {/* ── Productivity + Tab cards side-by-side ── */}
+      <div className={styles.subSearchRow}>
         <ProductivityCard />
         <TabIntelCard />
       </div>

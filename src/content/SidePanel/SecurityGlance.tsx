@@ -6,74 +6,173 @@ interface Props {
   origin: string;
 }
 
-// Deterministic server location from domain hash
-function getSimulatedServer(domain: string): { ip: string; location: string } {
-  let hash = 0;
-  for (let i = 0; i < domain.length; i++) {
-    hash = domain.charCodeAt(i) + ((hash << 5) - hash);
+const formatDate = (isoString: string | null) => {
+  if (!isoString) return 'Unknown';
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return 'Unknown';
+    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch {
+    return 'Unknown';
   }
-  const ip = `${100 + Math.abs((hash >> 24) & 99)}.${20 + Math.abs((hash >> 16) & 200)}.${10 + Math.abs((hash >> 8) & 240)}.${1 + Math.abs(hash & 254)}`;
-  const locations = [
-    'San Jose, US · Cloudflare', 'Ashburn, US · Amazon AWS',
-    'Frankfurt, DE · Google Cloud', 'Dublin, IE · Amazon AWS',
-    'Singapore, SG · DigitalOcean', 'Tokyo, JP · Linode',
-    'Amsterdam, NL · Leaseweb', 'London, UK · Microsoft Azure',
-  ];
-  return { ip, location: locations[Math.abs(hash) % locations.length] };
-}
+};
 
-function safetyScore(report: SecurityReport, hash: number): number {
-  if (report.riskLevel === 'Safe') return 95 + (Math.abs(hash) % 5);
-  if (report.riskLevel === 'Medium Risk') return 55 + (Math.abs(hash) % 15);
-  return 12 + (Math.abs(hash) % 20);
-}
+const formatRegMonthYear = (isoString: string | null) => {
+  if (!isoString) return 'Unknown';
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return 'Unknown';
+    return d.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+  } catch {
+    return 'Unknown';
+  }
+};
 
 function scoreColor(score: number) {
-  if (score >= 85) return '#22c55e';
+  if (score >= 80) return '#22c55e';
   if (score >= 50) return '#f59e0b';
   return '#ef4444';
 }
+
+const blockBar = (score: number) => {
+  const filledCount = Math.round(score / 5); // 20 blocks max
+  const unfilledCount = Math.max(0, 20 - filledCount);
+  return '█'.repeat(filledCount) + '░'.repeat(unfilledCount);
+};
 
 export default function SecurityGlance({ origin }: Props) {
   const [report, setReport] = useState<SecurityReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  const [permissions, setPermissions] = useState<Record<string, string>>({});
+  const [cameraActive, setCameraActive] = useState(false);
+  const [micActive, setMicActive] = useState(false);
+  const [showNameservers, setShowNameservers] = useState(false);
 
   useEffect(() => {
     if (!origin || !origin.startsWith('http')) return;
 
-    // First check cache in chrome.storage
-    chrome.storage.local.get('ex1:securityCache', (result) => {
-      const cache = (result['ex1:securityCache'] ?? {}) as Record<string, SecurityReport>;
-      if (cache[origin]) {
-        setReport(cache[origin]);
-        return;
-      }
-
-      // Not in cache — ask background to generate it
-      setLoading(true);
-      chrome.runtime.sendMessage(
-        { type: 'REQUEST_SECURITY_REPORT', origin },
-        (response) => {
-          setLoading(false);
-          if (chrome.runtime.lastError) {
-            setError('Background engine unreachable');
-            return;
-          }
-          if (response?.ok && response.data) {
-            setReport(response.data as SecurityReport);
-          } else {
-            setError(response?.error ?? 'Unknown error');
-          }
+    const loadReport = () => {
+      chrome.storage.local.get('security:reports', (result) => {
+        const cache = (result['security:reports'] ?? {}) as Record<string, SecurityReport>;
+        if (cache[origin]) {
+          setReport(cache[origin]);
         }
-      );
+      });
+    };
+
+    loadReport();
+
+    // Query report if not found or trigger scan
+    chrome.storage.local.get('security:reports', (result) => {
+      const cache = (result['security:reports'] ?? {}) as Record<string, SecurityReport>;
+      if (!cache[origin]) {
+        setLoading(true);
+        chrome.runtime.sendMessage(
+          { type: 'REQUEST_SECURITY_REPORT', origin },
+          (response) => {
+            setLoading(false);
+            if (chrome.runtime.lastError) {
+              setError('Background engine unreachable');
+              return;
+            }
+            if (response?.ok && response.data) {
+              setReport(response.data as SecurityReport);
+            } else {
+              setError(response?.error || 'Unknown error');
+            }
+          }
+        );
+      }
     });
+
+    // Query permissions and live media directly without IPC roundtrips
+    const queryPermissionsAndMedia = async () => {
+      const permissionNames = [
+        'camera',
+        'microphone',
+        'geolocation',
+        'notifications',
+        'clipboard-read',
+      ];
+      const perms: Record<string, string> = {};
+
+      for (const name of permissionNames) {
+        try {
+          const status = await navigator.permissions.query({ name: name as any });
+          perms[name] = status.state;
+        } catch {
+          perms[name] = 'unavailable';
+        }
+      }
+      setPermissions(perms);
+
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const cameraActive = devices.some(d => d.kind === 'videoinput' && d.label !== '');
+        const micActive = devices.some(d => d.kind === 'audioinput' && d.label !== '');
+        setCameraActive(cameraActive);
+        setMicActive(micActive);
+      } catch {
+        setCameraActive(false);
+        setMicActive(false);
+      }
+    };
+
+    queryPermissionsAndMedia();
+    const interval = setInterval(queryPermissionsAndMedia, 3000);
+
+    // Real-time listener for cache changes
+    const storageListener = (changes: Record<string, chrome.storage.StorageChange>) => {
+      if ('security:reports' in changes) {
+        const cache = (changes['security:reports'].newValue ?? {}) as Record<string, SecurityReport>;
+        if (cache[origin]) {
+          setReport(cache[origin]);
+        }
+      }
+    };
+    chrome.storage.onChanged.addListener(storageListener);
+
+    return () => {
+      chrome.storage.onChanged.removeListener(storageListener);
+      clearInterval(interval);
+    };
   }, [origin]);
+
+  const renderPermissionState = (state: string, isActive?: boolean) => {
+    if (isActive) {
+      return (
+        <span style={{ color: '#22c55e', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', display: 'inline-block', boxShadow: '0 0 8px #22c55e' }} />
+          ACTIVE
+        </span>
+      );
+    }
+    if (state === 'granted') {
+      return (
+        <span style={{ color: '#22c55e', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+          GRANTED
+        </span>
+      );
+    }
+    if (state === 'denied') {
+      return <span style={{ color: '#ef4444', fontWeight: 600 }}>✗ DENIED</span>;
+    }
+    if (state === 'prompt') {
+      return <span style={{ color: '#f59e0b', fontWeight: 600 }}>? ASK</span>;
+    }
+    if (state === 'unknown' || state === 'unavailable') {
+      return <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>UNKNOWN</span>;
+    }
+    return <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>N/A</span>;
+  };
 
   if (!origin || !origin.startsWith('http')) {
     return (
       <div className={styles.sectionWrapper}>
-        <div className={styles.sectionHeader}>WEBSITE SECURITY</div>
+        <div className={styles.sectionHeader}>WEBSITE SECURITY & OSINT</div>
         <div className={styles.idleState}>
           <div className={styles.idleText}>SYSTEM PAGE — NO SCAN</div>
         </div>
@@ -82,78 +181,167 @@ export default function SecurityGlance({ origin }: Props) {
   }
 
   const domain = origin.replace(/^https?:\/\//, '');
-  let hash = 0;
-  for (let i = 0; i < domain.length; i++) hash = domain.charCodeAt(i) + ((hash << 5) - hash);
-  const { ip, location } = getSimulatedServer(domain);
-
   const riskClass = report
-    ? report.riskLevel === 'Safe' ? styles.safe : report.riskLevel === 'Medium Risk' ? styles.medium : styles.high
+    ? report.verdict === 'Safe' ? styles.safe : report.verdict === 'Medium Risk' ? styles.medium : styles.high
     : '';
 
-  const score = report ? safetyScore(report, hash) : null;
+  const safetyIndex = report?.safetyIndex ?? 0;
 
   return (
     <div className={styles.sectionWrapper}>
       <div className={styles.sectionHeader}>WEBSITE SECURITY & OSINT</div>
+      <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '2px 0 6px 0' }} />
 
-      {loading && <div className={styles.loading}>Scanning {domain}...</div>}
+      {loading && <div className={styles.loading}>Running cyber scanning engine on {domain}...</div>}
 
       {error && !loading && (
         <div className={styles.loading} style={{ color: '#ef4444' }}>{error}</div>
       )}
 
       {!loading && !error && report && (
-        <div className={styles.securityBody}>
-          {/* Safety Index */}
-          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', padding: '10px 12px', borderRadius: '8px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <span style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em' }}>SAFETY INDEX</span>
-              <span style={{ fontSize: '18px', fontWeight: 700, color: scoreColor(score!), fontFamily: 'monospace' }}>{score}%</span>
+        <div className={styles.securityBody} style={{ fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          
+          {/* Safety Index Visual Bar */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.05em' }}>SAFETY INDEX</span>
+              <span style={{ fontSize: '14px', fontWeight: 700, color: scoreColor(safetyIndex), fontFamily: 'monospace' }}>{safetyIndex}%</span>
             </div>
-            <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${score}%`, background: scoreColor(score!), borderRadius: '2px', transition: 'width 0.8s ease' }} />
-            </div>
-          </div>
-
-          {/* Verdict */}
-          <div className={styles.verdictRow}>
-            <span>VERDICT</span>
-            <span className={`${styles.verdictBadge} ${riskClass}`}>{report.riskLevel}</span>
-          </div>
-
-          {/* Details */}
-          <div className={styles.detailsList}>
-            <div className={styles.detailItem}>
-              <span className={styles.detailLabel}>HTTPS</span>
-              <span style={{ fontSize: '11px', fontWeight: 600, color: report.https ? '#22c55e' : '#ef4444' }}>
-                {report.https ? '✓ SECURE' : '✗ UNENCRYPTED'}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontFamily: 'monospace', fontSize: '12px', color: scoreColor(safetyIndex), letterSpacing: '2px' }}>
+                {blockBar(safetyIndex)}
+              </span>
+              <span className={`${styles.verdictBadge} ${riskClass}`} style={{ whiteSpace: 'nowrap' }}>
+                {report.verdict.toUpperCase()}
               </span>
             </div>
-            <div className={styles.detailItem}>
-              <span className={styles.detailLabel}>SERVER IP</span>
-              <span className={styles.detailVal} style={{ fontFamily: 'monospace', fontSize: '10px' }}>{ip}</span>
-            </div>
-            <div className={styles.detailItem}>
-              <span className={styles.detailLabel}>HOSTING</span>
-              <span className={styles.detailVal} style={{ fontSize: '10px', textAlign: 'right', maxWidth: '150px' }}>{location}</span>
-            </div>
-            <div className={styles.detailItem}>
-              <span className={styles.detailLabel}>DOMAIN AGE</span>
-              <span className={styles.detailVal}>{report.domainAgeDays !== null ? `${report.domainAgeDays}d` : 'Unknown'}</span>
+          </div>
+
+          {/* Connection */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em' }}>CONNECTION</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', paddingLeft: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'rgba(255,255,255,0.4)' }}>HTTPS</span>
+                <span style={{ fontWeight: 700, color: report.https ? '#22c55e' : '#ef4444' }}>
+                  {report.https ? '✓ SECURE' : '✗ UNENCRYPTED'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'rgba(255,255,255,0.4)' }}>CERTIFICATE</span>
+                <span>{report.certValid ? `Valid · ${formatDate(report.certExpiresAt ? new Date(report.certExpiresAt).toISOString() : null)}` : 'Invalid'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'rgba(255,255,255,0.4)' }}>ISSUER</span>
+                <span>{report.certIssuer || 'N/A'}</span>
+              </div>
             </div>
           </div>
 
-          {/* Flags */}
-          {report.flags.length > 0 && (
-            <div className={styles.flagsSection}>
-              <span className={styles.flagsLabel}>RISK FLAGS</span>
-              <div className={styles.flagsList}>
-                {report.flags.map((flag, i) => (
-                  <span key={i} className={styles.flagItem}>{flag.replace(/[:-]/g, ' ')}</span>
-                ))}
+          {/* Server */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em' }}>SERVER</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', paddingLeft: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'rgba(255,255,255,0.4)' }}>IP</span>
+                <span style={{ fontFamily: 'monospace' }}>{report.ip || 'Unknown'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'rgba(255,255,255,0.4)' }}>HOSTING</span>
+                <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '170px' }}>{report.org || 'Unknown'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'rgba(255,255,255,0.4)' }}>LOCATION</span>
+                <span>{report.city || report.country ? `${report.city || ''}, ${report.country || ''}` : 'Unknown'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'rgba(255,255,255,0.4)' }}>ASN</span>
+                <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '170px', fontFamily: 'monospace', fontSize: '10px' }}>{report.asn || 'Unknown'}</span>
               </div>
             </div>
-          )}
+          </div>
+
+          {/* Domain */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em' }}>DOMAIN</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', paddingLeft: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'rgba(255,255,255,0.4)' }}>AGE</span>
+                <span>{report.ageYears ? `${report.ageYears} years` : 'Unknown'} <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px' }}>({formatRegMonthYear(report.registeredAt)})</span></span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'rgba(255,255,255,0.4)' }}>REGISTRAR</span>
+                <span>{report.registrar || 'Unknown'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'rgba(255,255,255,0.4)' }}>EXPIRES</span>
+                <span>{formatDate(report.expiresAt)}</span>
+              </div>
+              
+              {/* Nameservers (Collapsible) */}
+              {report.nameservers && report.nameservers.length > 0 && (
+                <div style={{ marginTop: '4px' }}>
+                  <button 
+                    onClick={() => setShowNameservers(!showNameservers)} 
+                    style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent)', cursor: 'pointer', fontSize: '9px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}
+                  >
+                    {showNameservers ? '▼ HIDE NAMESERVERS' : '▶ SHOW NAMESERVERS'}
+                  </button>
+                  {showNameservers && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', padding: '4px 6px', background: 'rgba(255,255,255,0.03)', borderRadius: '4px', marginTop: '4px', fontFamily: 'monospace', fontSize: '9px', color: 'rgba(255,255,255,0.6)' }}>
+                      {report.nameservers.map((ns, idx) => (
+                        <div key={idx}>{ns}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Risk Flags */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em' }}>RISK FLAGS</span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', paddingLeft: '8px' }}>
+              {report.flags.length === 0 ? (
+                <span style={{ color: '#22c55e', fontWeight: 600 }}>✓ No suspicious patterns detected</span>
+              ) : (
+                report.flags.map((flag, idx) => (
+                  <span key={idx} className={styles.flagItem}>
+                    {flag.replace(/[:-]/g, ' ')}
+                  </span>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Page Permissions */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '10px' }}>
+            <span style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em' }}>PAGE PERMISSIONS</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Camera</span>
+                <span>{renderPermissionState(permissions['camera'] || 'unknown', cameraActive)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Microphone</span>
+                <span>{renderPermissionState(permissions['microphone'] || 'unknown', micActive)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Location</span>
+                <span>{renderPermissionState(permissions['geolocation'] || 'unknown')}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Notifications</span>
+                <span>{renderPermissionState(permissions['notifications'] || 'unknown')}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Clipboard</span>
+                <span>{renderPermissionState(permissions['clipboard-read'] || 'unknown')}</span>
+              </div>
+            </div>
+          </div>
+
         </div>
       )}
 

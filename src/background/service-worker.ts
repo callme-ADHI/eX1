@@ -1,9 +1,10 @@
 import { storageGet, storageSet, KEYS } from '../shared/storage';
 import { DEFAULT_AI_TOOLS, DEFAULT_DOCK_ITEMS, DEFAULT_SETTINGS } from '../shared/defaults';
 import { initFocusEngine, startSession, pauseSession, resumeSession, cancelSession } from './focusEngine';
-import { initTabEngine } from './tabEngine';
+import { initTabEngine, updateTabMeta } from './tabEngine';
 import { initSecurityEngine, generateReport } from './securityEngine';
 import { initProductivityEngine, addTask, updateTask, deleteTask } from './productivityEngine';
+import { initializeTabIntelligence } from './modules/tabIntelligence';
 import type { Message, MessageResponse } from '../shared/messaging';
 import { extractOrigin } from '../shared/utils';
 
@@ -27,21 +28,57 @@ initFocusEngine();
 initTabEngine();
 initSecurityEngine();
 initProductivityEngine();
+initializeTabIntelligence();
 
 // ─── Message router ───────────────────────────────────────────────────────────
 // IMPORTANT: handlers that respond asynchronously must return true.
 
 chrome.runtime.onMessage.addListener(
-  (message: Message, _sender, sendResponse: (r: MessageResponse) => void) => {
-    handleMessage(message)
+  (message: Message, sender, sendResponse: (r: MessageResponse) => void) => {
+    handleMessage(message, sender)
       .then((data) => sendResponse({ ok: true, data }))
       .catch((err) => sendResponse({ ok: false, error: String(err) }));
     return true; // keep channel open for async response
   }
 );
 
-async function handleMessage(msg: Message): Promise<unknown> {
+async function handleMessage(msg: Message, sender: chrome.runtime.MessageSender): Promise<unknown> {
   switch (msg.type) {
+    case 'PAGE_META': {
+      const tabId = sender.tab?.id;
+      if (tabId && msg.type === 'PAGE_META') {
+        updateTabMeta(tabId, msg);
+      }
+      if (msg.type === 'PAGE_META' && msg.origin && msg.permissions) {
+        const cache = (await storageGet<Record<string, any>>(KEYS.SECURITY_CACHE)) ?? {};
+        const existingReport = cache[msg.origin] ?? {
+          origin: msg.origin,
+          riskLevel: 'Safe',
+          domainAgeDays: null,
+          https: msg.origin.startsWith('https://'),
+          certIssuer: null,
+          certExpiresAt: null,
+          flags: [],
+          permissions: {
+            camera: 'unknown',
+            microphone: 'unknown',
+            geolocation: 'unknown',
+            notifications: 'unknown',
+            clipboard: 'unknown',
+            popups: 'unknown',
+          },
+          generatedAt: Date.now(),
+        };
+        existingReport.permissions = {
+          ...existingReport.permissions,
+          ...msg.permissions
+        };
+        cache[msg.origin] = existingReport;
+        await storageSet(KEYS.SECURITY_CACHE, cache);
+      }
+      return;
+    }
+
     case 'OPEN_TAB':
       await chrome.tabs.create({ url: msg.url, active: msg.active ?? true });
       return;
@@ -72,6 +109,30 @@ async function handleMessage(msg: Message): Promise<unknown> {
       const updated = { ...cache, [msg.origin]: report };
       await storageSet(KEYS.SECURITY_CACHE, updated);
       return report;
+    }
+
+    case 'QUERY_PAGE_PERMISSIONS': {
+      const tabId = sender.tab?.id;
+      if (tabId) {
+        return new Promise((resolve) => {
+          chrome.tabs.sendMessage(tabId, { type: 'QUERY_PAGE_PERMISSIONS' }, (res) => {
+            resolve(res || { permissions: {} });
+          });
+        });
+      }
+      return { permissions: {} };
+    }
+
+    case 'QUERY_ACTIVE_MEDIA': {
+      const tabId = sender.tab?.id;
+      if (tabId) {
+        return new Promise((resolve) => {
+          chrome.tabs.sendMessage(tabId, { type: 'QUERY_ACTIVE_MEDIA' }, (res) => {
+            resolve(res || { cameraActive: false, micActive: false });
+          });
+        });
+      }
+      return { cameraActive: false, micActive: false };
     }
 
     case 'ADD_TASK':

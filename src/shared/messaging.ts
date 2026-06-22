@@ -12,7 +12,20 @@ export type Message =
   | { type: 'REQUEST_SECURITY_REPORT'; origin: string }
   | { type: 'ADD_TASK'; task: { title: string; description: string; category: string; dueAt: number | null; priority: string } }
   | { type: 'UPDATE_TASK'; id: string; updates: Record<string, unknown> }
-  | { type: 'DELETE_TASK'; id: string };
+  | { type: 'DELETE_TASK'; id: string }
+  | { type: 'QUERY_PAGE_PERMISSIONS' }
+  | { type: 'QUERY_ACTIVE_MEDIA' }
+  | {
+      type: 'PAGE_META';
+      origin: string;
+      title: string;
+      description: string;
+      ogType: string;
+      cameraAccessCount: number;
+      micAccessCount: number;
+      fetchCount: number;
+      permissions: Record<string, string>;
+    };
 
 export type MessageResponse<T = any> =
   | { ok: true; data: T }

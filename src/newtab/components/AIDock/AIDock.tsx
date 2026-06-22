@@ -123,7 +123,7 @@ export default function AIDock() {
             transition={{ type: 'spring', stiffness: 360, damping: 32 }}
           >
             <div
-              className={`${styles.dockContainer} glass-card`}
+              className={styles.dockContainer}
               onMouseLeave={() => setHoverIndex(null)}
               style={{
                 '--item-size': `${itemSize}px`
@@ -158,10 +158,10 @@ export default function AIDock() {
                       draggable={false}
                       style={{
                         boxShadow: glowOpacity > 0 
-                          ? `0 10px 25px color-mix(in srgb, var(--accent) ${glowOpacity * 100}%, transparent), 0 0 10px color-mix(in srgb, var(--accent) ${glowOpacity * 50}%, transparent)` 
+                          ? `0 10px 30px color-mix(in srgb, var(--accent) ${Math.min(100, glowOpacity * 250)}%, transparent), 0 0 15px color-mix(in srgb, var(--accent) ${Math.min(100, glowOpacity * 200)}%, transparent)` 
                           : undefined,
                         borderColor: glowOpacity > 0
-                          ? `color-mix(in srgb, var(--accent) ${glowOpacity * 100}%, var(--border))`
+                          ? `color-mix(in srgb, var(--accent) ${Math.min(100, glowOpacity * 250)}%, var(--border))`
                           : undefined
                       }}
                     >

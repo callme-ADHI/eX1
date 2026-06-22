@@ -51,7 +51,7 @@ export async function deleteTask(id: string): Promise<void> {
 
 // ─── Rollup computation ───────────────────────────────────────────────────────
 
-async function computeAllRollups() {
+export async function computeAllRollups() {
   await computeRollup('daily');
   await computeRollup('weekly');
 }
@@ -94,53 +94,76 @@ async function computeRollup(period: 'daily' | 'weekly'): Promise<void> {
     (t) => t.status === 'pending' && Date.now() - t.createdAt > 7 * 86_400_000
   );
 
-  // ─── Score computation (0–100, fully explainable) ─────────────────────────
+  // ─── Score computation (Base 75 + adjustments) ─────────────────────────
+  let score = 75;
   const positiveFactors: { label: string; contribution: number }[] = [];
   const negativeFactors:  { label: string; contribution: number }[] = [];
 
-  // Positive
+  const totalBrowsingMs = productiveMs + distractingMs + neutralMs;
+
+  if (totalBrowsingMs > 0) {
+    const productiveRatio = productiveMs / (productiveMs + distractingMs || 1);
+    if (productiveRatio >= 0.7) {
+      const bonus = Math.round((productiveRatio - 0.7) * 50); // up to +15
+      if (bonus > 0) {
+        positiveFactors.push({ label: `High productivity ratio (${Math.round(productiveRatio * 100)}%)`, contribution: bonus });
+        score += bonus;
+      }
+    } else if (productiveRatio < 0.4) {
+      const penalty = Math.round((0.4 - productiveRatio) * 50); // up to -20
+      if (penalty > 0) {
+        negativeFactors.push({ label: `Low productivity ratio (${Math.round(productiveRatio * 100)}%)`, contribution: -penalty });
+        score -= penalty;
+      }
+    }
+  }
+
+  // Focus sessions
   if (completionRate > 0) {
-    const c = Math.round(completionRate * 25);
-    positiveFactors.push({ label: `Session completion rate (${Math.round(completionRate * 100)}%)`, contribution: c });
+    const bonus = Math.round(completionRate * 15);
+    positiveFactors.push({ label: `Focus session completion (${Math.round(completionRate * 100)}%)`, contribution: bonus });
+    score += bonus;
   }
   if (totalFocusMs > 0) {
-    const focusHours = totalFocusMs / 3_600_000;
-    const c = Math.min(20, Math.round(focusHours * 4));
-    positiveFactors.push({ label: `Focus time (${focusHours.toFixed(1)}h)`, contribution: c });
-  }
-  if (completedTasks.length > 0) {
-    const c = Math.min(20, completedTasks.length * 4);
-    positiveFactors.push({ label: `Tasks completed (${completedTasks.length})`, contribution: c });
-  }
-  if (productiveMs > 0) {
-    const ph = productiveMs / 3_600_000;
-    const c = Math.min(15, Math.round(ph * 3));
-    positiveFactors.push({ label: `Productive browsing (${ph.toFixed(1)}h)`, contribution: c });
+    const hours = totalFocusMs / 3_600_000;
+    const bonus = Math.min(10, Math.round(hours * 3));
+    if (bonus > 0) {
+      positiveFactors.push({ label: `Focus duration (${hours.toFixed(1)}h)`, contribution: bonus });
+      score += bonus;
+    }
   }
 
-  // Negative
-  if (distractingMs > 3_600_000) {
-    const dh = distractingMs / 3_600_000;
-    const c = -Math.min(20, Math.round((dh - 1) * 5));
-    negativeFactors.push({ label: `Excess entertainment/social (${dh.toFixed(1)}h)`, contribution: c });
+  // Tasks completed
+  if (completedTasks.length > 0) {
+    const bonus = Math.min(15, completedTasks.length * 3);
+    positiveFactors.push({ label: `Completed tasks (+${completedTasks.length})`, contribution: bonus });
+    score += bonus;
+  }
+
+  // Distraction deductions
+  if (distractingMs > 1_800_000) { // > 30 mins
+    const hours = distractingMs / 3_600_000;
+    const penalty = Math.min(25, Math.round(hours * 6));
+    negativeFactors.push({ label: `Distracting browsing (${hours.toFixed(1)}h)`, contribution: -penalty });
+    score -= penalty;
   }
   if (distractionAttempts > 0) {
-    const c = -Math.min(10, distractionAttempts * 2);
-    negativeFactors.push({ label: `Blocked-site attempts (${distractionAttempts})`, contribution: c });
+    const penalty = Math.min(15, distractionAttempts * 3);
+    negativeFactors.push({ label: `Focus blocklist violations (×${distractionAttempts})`, contribution: -penalty });
+    score -= penalty;
   }
   if (overdueTasks.length > 0) {
-    const c = -Math.min(15, overdueTasks.length * 5);
-    negativeFactors.push({ label: `Overdue tasks (${overdueTasks.length})`, contribution: c });
-  }
-  if (staleTasks.length > 0) {
-    const c = -Math.min(10, staleTasks.length * 2);
-    negativeFactors.push({ label: `Stale incomplete tasks (${staleTasks.length})`, contribution: c });
+    const penalty = Math.min(15, overdueTasks.length * 4);
+    negativeFactors.push({ label: `Overdue tasks (×${overdueTasks.length})`, contribution: -penalty });
+    score -= penalty;
   }
 
-  const rawScore =
-    positiveFactors.reduce((a, f) => a + f.contribution, 0) +
-    negativeFactors.reduce((a, f) => a + f.contribution, 0);
-  const score = Math.max(0, Math.min(100, rawScore));
+  score = Math.max(0, Math.min(100, score));
+
+  // Defaults to 100 on clean slate
+  if (totalBrowsingMs === 0 && sessionCount === 0 && allTasks.length === 0) {
+    score = 100;
+  }
 
   const rollup: ProductivityRollup = {
     period,

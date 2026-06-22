@@ -1,6 +1,7 @@
 import { storageGet, storageSet, KEYS } from '../shared/storage';
 import type { TabRecord, TabSnapshot } from '../shared/types';
-import { extractDomain, classifyDomain } from '../shared/utils';
+import { extractDomain, classifyDomain, classifyTab } from '../shared/utils';
+import { computeAllRollups } from './productivityEngine';
 
 // ─── In-memory tab store ──────────────────────────────────────────────────────
 
@@ -8,55 +9,147 @@ const tabStore = new Map<number, TabRecord>();
 let activeTabId: number | null = null;
 let activeTabStart: number = Date.now();
 
+// sessionRestoreMap stores URL -> previous state mapping
+const sessionRestoreMap = new Map<string, {
+  openedAt: number;
+  activeDurationMs: number;
+  visitCount: number;
+  category: string;
+  description?: string;
+  ogType?: string;
+  cameraAccessCount?: number;
+  micAccessCount?: number;
+  fetchCount?: number;
+}>();
+
+// Helper to look up URL or retrieve new tab defaults
+function getRestoredOrNew(tabId: number, url: string, title: string, existing?: TabRecord): TabRecord {
+  const now = Date.now();
+  const domain = extractDomain(url);
+
+  if (existing) {
+    return {
+      ...existing,
+      url,
+      domain,
+      title: title || existing.title,
+    };
+  }
+
+  const restored = sessionRestoreMap.get(url);
+  if (restored) {
+    return {
+      tabId,
+      url,
+      domain,
+      title,
+      openedAt: restored.openedAt,
+      lastAccessedAt: now,
+      activeDurationMs: restored.activeDurationMs,
+      visitCount: restored.visitCount,
+      category: restored.category,
+      description: restored.description,
+      ogType: restored.ogType,
+      cameraAccessCount: restored.cameraAccessCount,
+      micAccessCount: restored.micAccessCount,
+      fetchCount: restored.fetchCount
+    };
+  }
+
+  return {
+    tabId,
+    url,
+    domain,
+    title,
+    openedAt: now,
+    lastAccessedAt: now,
+    activeDurationMs: 0,
+    visitCount: 1,
+    category: classifyTab(url, domain, title, '', ''),
+  };
+}
+
 export function initTabEngine() {
-  // Snapshot all currently open tabs
-  chrome.tabs.query({}, (tabs) => {
-    const now = Date.now();
-    for (const tab of tabs) {
-      if (!tab.id || !tab.url) continue;
-      const domain = extractDomain(tab.url);
-      tabStore.set(tab.id, {
-        tabId: tab.id,
-        url: tab.url ?? '',
-        domain,
-        title: tab.title ?? '',
-        openedAt: now,
-        lastAccessedAt: now,
-        activeDurationMs: 0,
-        visitCount: 1,
-        category: classifyDomain(domain),
-      });
+  // Pre-load last snapshot from storage to restore openedAt dates
+  storageGet<TabSnapshot>(KEYS.TAB_SNAPSHOT).then((lastSnap) => {
+    if (lastSnap && lastSnap.tabs) {
+      for (const t of lastSnap.tabs) {
+        if (t.url && t.url !== 'chrome://newtab/' && t.url !== 'about:blank') {
+          sessionRestoreMap.set(t.url, {
+            openedAt: t.openedAt,
+            activeDurationMs: t.activeDurationMs,
+            visitCount: t.visitCount,
+            category: t.category,
+            description: t.description,
+            ogType: t.ogType,
+            cameraAccessCount: t.cameraAccessCount,
+            micAccessCount: t.micAccessCount,
+            fetchCount: t.fetchCount
+          });
+        }
+      }
     }
-    publishSnapshot();
+
+    // Now query all active tabs
+    chrome.tabs.query({}, (tabs) => {
+      for (const tab of tabs) {
+        if (!tab.id) continue;
+        const url = tab.url ?? '';
+        const title = tab.title ?? '';
+        tabStore.set(tab.id, getRestoredOrNew(tab.id, url, title));
+      }
+      publishSnapshot();
+    });
+  }).catch((err) => {
+    console.error('[tabEngine] failed to load snapshot for session restore:', err);
+    // Fallback: load tabs normally
+    chrome.tabs.query({}, (tabs) => {
+      const now = Date.now();
+      for (const tab of tabs) {
+        if (!tab.id) continue;
+        const url = tab.url ?? '';
+        const domain = extractDomain(url);
+        tabStore.set(tab.id, {
+          tabId: tab.id,
+          url,
+          domain,
+          title: tab.title ?? '',
+          openedAt: now,
+          lastAccessedAt: now,
+          activeDurationMs: 0,
+          visitCount: 1,
+          category: classifyTab(url, domain, tab.title ?? '', '', ''),
+        });
+      }
+      publishSnapshot();
+    });
   });
 
   // Tab lifecycle events
   chrome.tabs.onCreated.addListener((tab) => {
     if (!tab.id) return;
-    const domain = extractDomain(tab.url ?? '');
-    tabStore.set(tab.id, {
-      tabId: tab.id, url: tab.url ?? '', domain, title: tab.title ?? '',
-      openedAt: Date.now(), lastAccessedAt: Date.now(), activeDurationMs: 0,
-      visitCount: 1, category: classifyDomain(domain),
-    });
+    const url = tab.url ?? '';
+    const title = tab.title ?? '';
+    tabStore.set(tab.id, getRestoredOrNew(tab.id, url, title));
     publishSnapshot();
   });
 
   chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (changeInfo.url || changeInfo.title) {
-      const domain = extractDomain(tab.url ?? '');
       const existing = tabStore.get(tabId);
-      tabStore.set(tabId, {
-        ...(existing ?? {
-          tabId, openedAt: Date.now(), activeDurationMs: 0, visitCount: 0, lastAccessedAt: Date.now(),
-        }),
-        url: tab.url ?? existing?.url ?? '',
-        domain,
-        title: tab.title ?? existing?.title ?? '',
-        category: classifyDomain(domain),
-        visitCount: (existing?.visitCount ?? 0) + (changeInfo.url ? 1 : 0),
-        lastAccessedAt: Date.now(),
-      });
+      const url = tab.url ?? existing?.url ?? '';
+      const title = tab.title ?? existing?.title ?? '';
+      const description = existing?.description ?? '';
+      const ogType = existing?.ogType ?? '';
+      
+      const updated = getRestoredOrNew(tabId, url, title, existing);
+      updated.category = classifyTab(url, updated.domain, title, description, ogType);
+      if (changeInfo.url) {
+        updated.visitCount = (existing?.visitCount ?? 0) + 1;
+      }
+      updated.lastAccessedAt = Date.now();
+
+      tabStore.set(tabId, updated);
       publishSnapshot();
     }
   });
@@ -122,7 +215,9 @@ function publishSnapshot() {
     snapshotAt: Date.now(),
   };
 
-  storageSet(KEYS.TAB_SNAPSHOT, snapshot);
+  storageSet(KEYS.TAB_SNAPSHOT, snapshot).then(() => {
+    computeAllRollups().catch(err => console.error('[tabEngine] computeAllRollups error:', err));
+  });
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -137,6 +232,31 @@ function flushActiveTime() {
     });
   }
   activeTabStart = Date.now();
+}
+
+export function updateTabMeta(tabId: number, meta: {
+  title: string;
+  description: string;
+  ogType: string;
+  cameraAccessCount: number;
+  micAccessCount: number;
+  fetchCount: number;
+}) {
+  const existing = tabStore.get(tabId);
+  if (existing) {
+    const category = classifyTab(existing.url, existing.domain, meta.title, meta.description, meta.ogType);
+    tabStore.set(tabId, {
+      ...existing,
+      title: meta.title || existing.title,
+      description: meta.description,
+      ogType: meta.ogType,
+      cameraAccessCount: meta.cameraAccessCount,
+      micAccessCount: meta.micAccessCount,
+      fetchCount: meta.fetchCount,
+      category,
+    });
+    publishSnapshot();
+  }
 }
 
 export { tabStore };

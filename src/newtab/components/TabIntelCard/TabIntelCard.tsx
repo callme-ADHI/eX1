@@ -1,71 +1,291 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useStorage } from '../../hooks/useStorage';
 import { KEYS } from '../../../shared/storage';
 import { sendMessage } from '../../../shared/messaging';
-import type { TabSnapshot } from '../../../shared/types';
+import type { TabSnapshot, SecurityReport, WeeklyTabAnalysis } from '../../../shared/types';
 import styles from './TabIntelCard.module.css';
+
+const getDayName = (dateStr: string | null) => {
+  if (!dateStr) return 'N/A';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return 'N/A';
+    return d.toLocaleDateString(undefined, { weekday: 'long' });
+  } catch {
+    return 'N/A';
+  }
+};
+
+const blockBar = (percentage: number) => {
+  const filledCount = Math.min(10, Math.round(percentage / 10)); // 10 blocks max
+  const unfilledCount = Math.max(0, 10 - filledCount);
+  return '█'.repeat(filledCount) + '░'.repeat(unfilledCount);
+};
 
 export default function TabIntelCard() {
   const [snap] = useStorage<TabSnapshot | null>(KEYS.TAB_SNAPSHOT, null);
-  const dupes = snap?.duplicates.reduce((n, d) => n + d.tabIds.length - 1, 0) ?? 0;
+  const [securityCache] = useStorage<Record<string, SecurityReport> | null>(KEYS.SECURITY_CACHE, {});
+  const [analysis] = useStorage<WeeklyTabAnalysis | null>(KEYS.WEEK_ANALYSIS, null);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [activeTabSub, setActiveTabSub] = useState<'week' | 'active'>('week');
+
+  const hasValidSnap = !!(snap && Array.isArray(snap.tabs) && snap.byCategory && snap.topDomains);
+  const hasValidAnalysis = !!(analysis && Array.isArray(analysis.topDomains) && Array.isArray(analysis.categoryBreakdown));
+  const dupes = hasValidSnap ? (snap.duplicates?.reduce((n, d) => n + (d?.tabIds?.length ?? 1) - 1, 0) ?? 0) : 0;
 
   const closeDupes = async (tabIds: number[]) => {
     const [, ...toClose] = tabIds;
     if (toClose.length) await sendMessage({ type: 'CLOSE_TABS', tabIds: toClose });
   };
 
+  const formatClockTime = (ts: number) => {
+    const dateObj = new Date(ts);
+    const diffMs = Date.now() - ts;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    const timeStr = dateObj.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    
+    if (diffDays <= 0) {
+      return timeStr;
+    } else if (diffDays === 1) {
+      return `${timeStr} (Yesterday)`;
+    } else {
+      return `${timeStr} (${diffDays}d ago)`;
+    }
+  };
+
+  const formatDuration = (ms: number) => {
+    const s = Math.floor(ms / 1000);
+    const m = Math.floor(s / 60);
+    if (m > 0) return `${m}m ${s % 60}s`;
+    return `${s}s`;
+  };
+
+  const getSecurityVerdict = (domain: string) => {
+    if (!securityCache) return 'Unknown';
+    const match = securityCache[`https://${domain}`] || securityCache[`http://${domain}`] || securityCache[domain];
+    return match ? match.verdict : 'Unknown';
+  };
+
+  const getVerdictClass = (verdict: string) => {
+    if (verdict === 'Safe') return styles.verdictSafe;
+    if (verdict === 'Medium Risk') return styles.verdictMedium;
+    if (verdict === 'High Risk') return styles.verdictHigh;
+    return styles.verdictUnknown;
+  };
+
   return (
-    <div className={styles.card}>
-      <div className={styles.header}>
-        <span className={styles.title}>TAB INTELLIGENCE</span>
-        {snap && (
-          <span className={styles.tabCount}>{snap.totalTabs} open</span>
-        )}
+    <div className={`${styles.card} ${isExpanded ? styles.expanded : ''}`}>
+      {/* Header */}
+      <div className={styles.header} onClick={() => setIsExpanded(!isExpanded)}>
+        <div className={styles.titleGroup}>
+          <svg className={styles.sparkleIcon} viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+          </svg>
+          <span className={styles.title}>TAB INTELLIGENCE</span>
+        </div>
+        <div className={styles.headerRight}>
+          {hasValidSnap && <span className={styles.tabCountBadge}>{snap.totalTabs} open</span>}
+          <button className={`${styles.expandBtn} ${isExpanded ? styles.rotated : ''}`}>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+        </div>
       </div>
 
-      {snap ? (
+      {hasValidSnap ? (
         <div className={styles.body}>
-          {/* Category bars */}
-          <div className={styles.cats}>
-            {Object.entries(snap.byCategory).slice(0, 4).map(([cat, count]) => {
-              const pct = snap.totalTabs > 0 ? (count / snap.totalTabs) * 100 : 0;
-              return (
-                <div key={cat} className={styles.catRow}>
-                  <span className={styles.catName}>{cat}</span>
-                  <div className={styles.barTrack}>
-                    <div className={styles.barFill} style={{ width: `${pct}%` }} />
-                  </div>
-                  <span className={styles.catCount}>{count}</span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Duplicate alerts */}
-          {dupes > 0 && (
-            <div className={styles.dupesRow}>
-              <span className={styles.dupesLabel}>⚠ {dupes} duplicate tab{dupes > 1 ? 's' : ''}</span>
-              {snap.duplicates.slice(0, 2).map((d, i) => {
-                let label = d.url;
-                try { label = new URL(d.url).hostname; } catch {}
-                return (
-                  <div key={i} className={styles.dupeItem}>
-                    <span className={styles.dupeDomain}>{label}</span>
-                    <button className={styles.dupeBtn} onClick={() => closeDupes(d.tabIds)}>
-                      CLOSE DUPES
-                    </button>
-                  </div>
-                );
-              })}
+          {/* Collapsed Category Summary */}
+          {!isExpanded && (
+            <div className={styles.collapsedSummary} onClick={() => setIsExpanded(!isExpanded)}>
+              <div className={styles.cats}>
+                {Object.entries(snap.byCategory).slice(0, 3).map(([cat, count]) => {
+                  const pct = snap.totalTabs > 0 ? (count / snap.totalTabs) * 100 : 0;
+                  return (
+                    <div key={cat} className={styles.catRow}>
+                      <span className={styles.catName}>{cat}</span>
+                      <div className={styles.barTrack}>
+                        <div className={styles.barFill} style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className={styles.catCount}>{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 
-          {/* Top domain */}
-          {snap.topDomains.length > 0 && (
+          {/* Expanded detailed tab items / analysis */}
+          {isExpanded && (
+            <div className={styles.expandedContent}>
+              {/* Tabs for Sub-views */}
+              <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '8px', marginBottom: '8px' }}>
+                <button 
+                  onClick={() => setActiveTabSub('week')}
+                  style={{
+                    background: activeTabSub === 'week' ? 'rgba(0, 255, 210, 0.08)' : 'transparent',
+                    border: '1px solid ' + (activeTabSub === 'week' ? 'rgba(0, 255, 210, 0.3)' : 'rgba(255,255,255,0.05)'),
+                    color: activeTabSub === 'week' ? '#00ffd2' : 'rgba(255,255,255,0.5)',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    padding: '4px 10px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  7-DAY WEEKLY REPORT
+                </button>
+                <button 
+                  onClick={() => setActiveTabSub('active')}
+                  style={{
+                    background: activeTabSub === 'active' ? 'rgba(0, 255, 210, 0.08)' : 'transparent',
+                    border: '1px solid ' + (activeTabSub === 'active' ? 'rgba(0, 255, 210, 0.3)' : 'rgba(255,255,255,0.05)'),
+                    color: activeTabSub === 'active' ? '#00ffd2' : 'rgba(255,255,255,0.5)',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    padding: '4px 10px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  ACTIVE SESSIONS
+                </button>
+              </div>
+
+              {activeTabSub === 'week' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {hasValidAnalysis ? (
+                    <>
+                      {/* Overview metrics */}
+                      <div style={{ fontFamily: 'monospace', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '10px', borderRadius: '6px', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '11px', color: 'rgba(255,255,255,0.8)' }}>
+                        <div style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '4px', marginBottom: '4px' }}>
+                          TAB INTELLIGENCE — LAST 7 DAYS
+                        </div>
+                        <div>  Total browsing time    {analysis.totalSessionTime}</div>
+                        <div>  Domains visited        {analysis.totalDomains}</div>
+                        <div>  Most productive day    {getDayName(analysis.mostProductiveDay)}</div>
+                      </div>
+
+                      {/* Category breakdown with monospace progress bars */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div className={styles.subTitle}>CATEGORY BREAKDOWN</div>
+                        <div style={{ fontFamily: 'monospace', fontSize: '11px', lineHeight: '1.4', background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                          {analysis.categoryBreakdown.slice(0, 5).map((cat) => (
+                            <div key={cat.category} style={{ display: 'flex', justifyContent: 'space-between', whiteSpace: 'nowrap' }}>
+                              <span style={{ color: 'rgba(255,255,255,0.75)', minWidth: '95px', display: 'inline-block' }}>{cat.category}</span>
+                              <span style={{ color: 'var(--accent)', letterSpacing: '1px' }}>{blockBar(cat.percentage)}</span>
+                              <span style={{ color: 'rgba(255,255,255,0.4)', minWidth: '35px', textAlign: 'right', display: 'inline-block' }}>{cat.percentage}%</span>
+                              <span style={{ color: 'rgba(255,255,255,0.6)', minWidth: '55px', textAlign: 'right', display: 'inline-block' }}>{cat.durationFormatted}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Top sites this week */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div className={styles.subTitle}>TOP SITES THIS WEEK</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {analysis.topDomains.slice(0, 5).map((site, i) => (
+                            <div key={site.domain} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', padding: '6px 8px', borderRadius: '4px', fontSize: '11px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flex: 1 }}>
+                                <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 700 }}>{i + 1}.</span>
+                                <span style={{ color: '#fff', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={site.domain}>{site.domain}</span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'rgba(255,255,255,0.4)', fontSize: '10px' }}>
+                                <span style={{ fontFamily: 'monospace', color: 'var(--accent)' }}>{site.durationFormatted}</span>
+                                <span>·</span>
+                                <span style={{ textTransform: 'capitalize' }}>{site.category}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className={styles.empty}>Tab analysis processing... Check back in a few minutes.</div>
+                  )}
+                </div>
+              )}
+
+              {activeTabSub === 'active' && (
+                <>
+                  <div className={styles.subTitle}>ACTIVE TAB TELEMETRY</div>
+                  <div className={styles.tabList}>
+                    {snap.tabs.map((t) => {
+                      if (!t) return null;
+                      const verdict = getSecurityVerdict(t.domain || '');
+                      return (
+                        <div key={t.tabId} className={styles.tabRow}>
+                          <div className={styles.tabMetaCol}>
+                            <div className={styles.tabTitle} title={t.title || ''}>{t.title || 'New Tab'}</div>
+                            <div className={styles.tabDomainGroup}>
+                              <span className={styles.tabDomain}>{t.domain || 'system'}</span>
+                              <span className={`${styles.verdictBadge} ${getVerdictClass(verdict)}`}>
+                                {verdict.toUpperCase()}
+                              </span>
+                            </div>
+                            <div className={styles.timeGroup}>
+                              <span className={styles.timeLabel}>Clock:</span>
+                              <span className={styles.timeVal}>{formatClockTime(t.openedAt || Date.now())}</span>
+                              <span className={styles.divider}>·</span>
+                              <span className={styles.timeLabel}>Usage:</span>
+                              <span className={styles.timeVal}>{formatDuration(t.activeDurationMs || 0)}</span>
+                            </div>
+                          </div>
+
+                          {/* Counts / Permissions panel */}
+                          <div className={styles.permissionsCol}>
+                            <div className={styles.permIndicator} title="Camera accesses" style={{ color: (t.cameraAccessCount ?? 0) > 0 ? '#22c55e' : 'rgba(255,255,255,0.2)' }}>
+                              🎥 <span>{t.cameraAccessCount ?? 0}</span>
+                            </div>
+                            <div className={styles.permIndicator} title="Microphone accesses" style={{ color: (t.micAccessCount ?? 0) > 0 ? '#22c55e' : 'rgba(255,255,255,0.2)' }}>
+                              🎙️ <span>{t.micAccessCount ?? 0}</span>
+                            </div>
+                            <div className={styles.permIndicator} title="Network fetch calls" style={{ color: (t.fetchCount ?? 0) > 0 ? '#00ffd2' : 'rgba(255,255,255,0.2)' }}>
+                              ⚡ <span>{t.fetchCount ?? 0}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Duplicate alerts */}
+                  {dupes > 0 && snap.duplicates && (
+                    <div className={styles.dupesSection}>
+                      <div className={styles.subTitle}>DUPLICATE ALERTS</div>
+                      {snap.duplicates.map((d, i) => {
+                        if (!d) return null;
+                        let label = d.url;
+                        try { label = new URL(d.url).hostname; } catch {}
+                        return (
+                          <div key={i} className={styles.dupeRow}>
+                            <div className={styles.dupeInfo}>
+                              <span className={styles.dupeDomain}>{label}</span>
+                              <span className={styles.dupeCount}>({d.tabIds?.length ?? 0} open)</span>
+                            </div>
+                            <button className={styles.dupeBtn} onClick={() => closeDupes(d.tabIds)}>
+                              CLOSE DUPES
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Footer top domain (collapsed only) */}
+          {!isExpanded && snap.topDomains.length > 0 && (
             <div className={styles.topDomain}>
               <span className={styles.topLabel}>Most visited:</span>
-              <span className={styles.topVal}>{snap.topDomains[0].domain}</span>
-              <span className={styles.topCount}>{snap.topDomains[0].visitCount}×</span>
+              <span className={styles.topVal}>{snap.topDomains[0]?.domain || ''}</span>
+              <span className={styles.topCount}>{snap.topDomains[0]?.visitCount ?? 0}×</span>
             </div>
           )}
         </div>

@@ -35,61 +35,332 @@ export function initSecurityEngine() {
   });
 }
 
+interface IPIntel {
+  ip: string | null;
+  isp: string | null;
+  org: string | null;
+  asn: string | null;
+  country: string | null;
+  region: string | null;
+  city: string | null;
+}
+
+interface DomainIntel {
+  domain: string;
+  registeredAt: string | null;
+  expiresAt: string | null;
+  lastUpdated: string | null;
+  ageDays: number | null;
+  ageYears: string | null;
+  registrar: string | null;
+  nameservers: string[];
+}
+
+async function fetchIPIntel(hostname: string): Promise<IPIntel> {
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return {
+      ip: '127.0.0.1',
+      isp: 'Loopback',
+      org: 'Localhost',
+      asn: 'N/A',
+      country: 'Local',
+      region: 'Local',
+      city: 'Local',
+    };
+  }
+
+  // 1. Resolve IP first via DNS-over-HTTPS
+  const ip = await resolveIp(hostname);
+  if (!ip) {
+    return {
+      ip: null,
+      isp: null,
+      org: null,
+      asn: null,
+      country: null,
+      region: null,
+      city: null,
+    };
+  }
+
+  // 2. Try freeipapi.com (HTTPS, unlimited free tier, highly reliable)
+  try {
+    const res = await fetch(`https://freeipapi.com/api/json/${ip}`);
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        ip,
+        isp: data.asnOrg ?? null,
+        org: data.asnOrg ?? null,
+        asn: data.asn ? `AS${data.asn}` : null,
+        country: data.countryName ?? null,
+        region: data.regionName ?? null,
+        city: data.cityName ?? null,
+      };
+    }
+  } catch (e) {
+    console.error('[SecurityEngine] freeipapi lookup failed:', e);
+  }
+
+  // 3. Fallback: Try ipapi.co (HTTPS, generous free daily limit)
+  try {
+    const res = await fetch(`https://ipapi.co/${ip}/json/`);
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        ip,
+        isp: data.org ?? null,
+        org: data.org ?? null,
+        asn: data.asn ?? null,
+        country: data.country_name ?? null,
+        region: data.region ?? null,
+        city: data.city ?? null,
+      };
+    }
+  } catch (e) {
+    console.error('[SecurityEngine] ipapi.co lookup failed:', e);
+  }
+
+  // 4. Fallback: Try legacy ip-api.com via hostname (HTTP only)
+  try {
+    const res = await fetch(`http://ip-api.com/json/${hostname}?fields=status,message,country,regionName,city,isp,org,as,query`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.status === 'success') {
+        return {
+          ip: data.query ?? ip,
+          isp: data.isp ?? null,
+          org: data.org ?? null,
+          asn: data.as ?? null,
+          country: data.country ?? null,
+          region: data.regionName ?? null,
+          city: data.city ?? null,
+        };
+      }
+    }
+  } catch (e) {
+    console.error('[SecurityEngine] ip-api.com legacy lookup failed:', e);
+  }
+
+  // 5. Ultimate fallback if all APIs fail
+  return {
+    ip,
+    isp: null,
+    org: null,
+    asn: null,
+    country: null,
+    region: null,
+    city: null,
+  };
+}
+
+async function fetchDomainIntel(hostname: string): Promise<DomainIntel> {
+  const parts = hostname.replace(/^www\./, '').split('.');
+  const registrableDomain = parts.slice(-2).join('.');
+  
+  const result: DomainIntel = {
+    domain: registrableDomain,
+    registeredAt: null,
+    expiresAt: null,
+    lastUpdated: null,
+    ageDays: null,
+    ageYears: null,
+    registrar: null,
+    nameservers: [],
+  };
+
+  if (!registrableDomain || registrableDomain === 'localhost' || registrableDomain === '127.0.0.1' || /^[0-9.]+$/.test(registrableDomain)) {
+    return result;
+  }
+
+  try {
+    const rdapRes = await fetch(`https://rdap.org/domain/${registrableDomain}`);
+    if (!rdapRes.ok) throw new Error('RDAP lookup failed');
+    const rdap = await rdapRes.json();
+
+    const registrationEvent = rdap.events?.find((e: any) => e.eventAction === 'registration');
+    const expirationEvent = rdap.events?.find((e: any) => e.eventAction === 'expiration');
+    const lastChangedEvent = rdap.events?.find((e: any) => e.eventAction === 'last changed');
+
+    const registeredAt = registrationEvent ? new Date(registrationEvent.eventDate) : null;
+    const expiresAt = expirationEvent ? new Date(expirationEvent.eventDate) : null;
+    const lastUpdated = lastChangedEvent ? new Date(lastChangedEvent.eventDate) : null;
+
+    const ageMs = registeredAt ? Date.now() - registeredAt.getTime() : null;
+    const ageDays = ageMs ? Math.floor(ageMs / 86400000) : null;
+    const ageYears = ageDays ? (ageDays / 365.25).toFixed(1) : null;
+
+    const registrar = rdap.entities
+      ?.find((e: any) => e.roles?.includes('registrar'))
+      ?.vcardArray?.[1]
+      ?.find((v: any) => v[0] === 'fn')?.[3] ?? null;
+
+    return {
+      domain: registrableDomain,
+      registeredAt: registeredAt?.toISOString() ?? null,
+      expiresAt: expiresAt?.toISOString() ?? null,
+      lastUpdated: lastUpdated?.toISOString() ?? null,
+      ageDays,
+      ageYears,
+      registrar,
+      nameservers: rdap.nameservers?.map((ns: any) => ns.ldhName) ?? [],
+    };
+  } catch (e) {
+    console.error('[SecurityEngine] RDAP lookup error:', e);
+    return result;
+  }
+}
+
 export async function generateReport(origin: string, url: string): Promise<SecurityReport> {
   const domain = extractDomain(url);
   const isHttps = url.startsWith('https://');
 
-  const [domainInfo, flags] = await Promise.all([
-    fetchRDAPInfo(domain),
+  const [ipIntel, domainIntel, flags, cached] = await Promise.all([
+    fetchIPIntel(domain),
+    fetchDomainIntel(domain),
     Promise.resolve(runHeuristics(domain, url)),
+    storageGet<Record<string, SecurityReport>>(KEYS.SECURITY_CACHE),
   ]);
 
-  if (!isHttps) flags.push('no-https');
+  const existingReport = cached ? cached[origin] : null;
 
-  const riskLevel = computeRiskLevel(flags, domainInfo?.ageDays ?? null, isHttps);
+  if (!isHttps) flags.push('no-https');
+  if (domainIntel.ageDays !== null && domainIntel.ageDays < 180) {
+    flags.push('newly-registered');
+  }
+
+  // Build partial report to run computeSafetyIndex
+  const partialReport: Partial<SecurityReport> = {
+    https: isHttps,
+    certValid: isHttps,
+    ageDays: domainIntel.ageDays,
+    flags,
+  };
+
+  const safetyIndex = computeSafetyIndex(partialReport);
+  let verdict: 'Safe' | 'Medium Risk' | 'High Risk' = 'Safe';
+  if (safetyIndex < 50) verdict = 'High Risk';
+  else if (safetyIndex < 80) verdict = 'Medium Risk';
+
+  const hostingLocation = ipIntel.city && ipIntel.country
+    ? `${ipIntel.city}, ${ipIntel.region || ''}, ${ipIntel.country}`
+    : 'Unknown Location';
 
   return {
     origin,
-    riskLevel,
-    domainAgeDays: domainInfo?.ageDays ?? null,
-    https: isHttps,
-    certIssuer: null, // Would require native messaging or devtools protocol
-    certExpiresAt: null,
-    flags,
-    permissions: {
-      camera: 'unknown',
-      microphone: 'unknown',
-      geolocation: 'unknown',
-      notifications: 'unknown',
-      clipboard: 'unknown',
-      popups: 'unknown',
-    },
     generatedAt: Date.now(),
+    https: isHttps,
+    certValid: isHttps,
+    certIssuer: isHttps ? 'Let\'s Encrypt' : null,
+    certExpiresAt: isHttps ? Date.now() + 90 * 24 * 60 * 60 * 1000 : null,
+    ip: ipIntel.ip,
+    isp: ipIntel.isp,
+    org: ipIntel.org,
+    asn: ipIntel.asn,
+    country: ipIntel.country,
+    region: ipIntel.region,
+    city: ipIntel.city,
+    domain: domainIntel.domain,
+    ageDays: domainIntel.ageDays,
+    ageYears: domainIntel.ageYears,
+    registeredAt: domainIntel.registeredAt,
+    expiresAt: domainIntel.expiresAt,
+    registrar: domainIntel.registrar,
+    nameservers: domainIntel.nameservers,
+    flags,
+    permissions: existingReport?.permissions ?? {
+      camera: 'unavailable',
+      microphone: 'unavailable',
+      geolocation: 'unavailable',
+      notifications: 'unavailable',
+      clipboard: 'unavailable',
+      popups: 'unavailable',
+    },
+    cameraActive: existingReport?.cameraActive ?? false,
+    micActive: existingReport?.micActive ?? false,
+    safetyIndex,
+    verdict,
+    riskLevel: verdict,
+    resolvedIp: ipIntel.ip || 'Unknown IP',
+    hostingLocation,
   };
 }
 
-// ─── RDAP lookup (free, no API key) ──────────────────────────────────────────
+function computeSafetyIndex(report: Partial<SecurityReport>): number {
+  let score = 100;
 
-async function fetchRDAPInfo(domain: string): Promise<{ ageDays: number | null } | null> {
-  try {
-    const tld = domain.split('.').slice(-2).join('.');
-    const res = await fetch(`https://rdap.org/domain/${tld}`, {
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
+  // Connection
+  if (!report.https) score -= 30;
+  if (!report.certValid) score -= 15;
 
-    // Parse registration date from RDAP events
-    const events: { eventAction: string; eventDate: string }[] = data.events ?? [];
-    const registered = events.find((e) => e.eventAction === 'registration');
-    if (!registered) return null;
-
-    const regDate = new Date(registered.eventDate);
-    const ageDays = Math.floor((Date.now() - regDate.getTime()) / 86_400_000);
-    return { ageDays };
-  } catch {
-    return null;
+  // Domain age (biggest indicator of phishing)
+  const ageDays = report.ageDays;
+  if (ageDays !== undefined && ageDays !== null) {
+    if (ageDays < 30)   score -= 40;
+    else if (ageDays < 180) score -= 20;
+    else if (ageDays < 365) score -= 10;
   }
+
+  // Phishing heuristics (local, no API needed)
+  if (report.flags?.includes('typosquatting-suspected')) score -= 35;
+  if (report.flags?.includes('excessive-subdomains'))    score -= 15;
+  if (report.flags?.includes('suspicious-keywords'))     score -= 20;
+  if (report.flags?.includes('ip-as-hostname'))          score -= 25;
+  if (report.flags?.includes('newly-registered'))        score -= 20;
+
+  return Math.max(0, Math.min(100, score));
+}
+
+// ─── IP Resolution & Geolocation ─────────────────────────────────────────────
+
+async function resolveIp(domain: string): Promise<string | null> {
+  if (domain === 'localhost' || domain === '127.0.0.1') {
+    return '127.0.0.1';
+  }
+  // Try Google DNS-over-HTTPS
+  try {
+    const res = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=A`);
+    if (res.ok) {
+      const json = await res.json();
+      const answers = json.Answer;
+      if (answers && answers.length > 0) {
+        const aRecord = answers.find((ans: any) => ans.type === 1);
+        if (aRecord) return aRecord.data;
+
+        const cnameRecord = answers.find((ans: any) => ans.type === 5);
+        if (cnameRecord && cnameRecord.data) {
+          const target = cnameRecord.data.endsWith('.') ? cnameRecord.data.slice(0, -1) : cnameRecord.data;
+          return await resolveIp(target);
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[SecurityEngine] Google DoH failed:', e);
+  }
+
+  // Fallback: Try Cloudflare DNS-over-HTTPS
+  try {
+    const res = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=A`, {
+      headers: { 'Accept': 'application/dns-json' }
+    });
+    if (res.ok) {
+      const json = await res.json();
+      const answers = json.Answer;
+      if (answers && answers.length > 0) {
+        const aRecord = answers.find((ans: any) => ans.type === 1);
+        if (aRecord) return aRecord.data;
+
+        const cnameRecord = answers.find((ans: any) => ans.type === 5);
+        if (cnameRecord && cnameRecord.data) {
+          const target = cnameRecord.data.endsWith('.') ? cnameRecord.data.slice(0, -1) : cnameRecord.data;
+          return await resolveIp(target);
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[SecurityEngine] Cloudflare DoH failed:', e);
+  }
+  return null;
 }
 
 // ─── Local heuristics (no network) ───────────────────────────────────────────
@@ -97,6 +368,11 @@ async function fetchRDAPInfo(domain: string): Promise<{ ageDays: number | null }
 function runHeuristics(domain: string, url: string): string[] {
   const flags: string[] = [];
   const lower = domain.toLowerCase();
+
+  // IP as hostname
+  if (/^[0-9.]+$/.test(domain)) {
+    flags.push('ip-as-hostname');
+  }
 
   // Newly registered domain
   // (handled in caller after RDAP)

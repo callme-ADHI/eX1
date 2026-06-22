@@ -100,7 +100,7 @@ export default function Dock() {
     <>
       <div className={styles.dockWrapper}>
         <div
-          className={`${styles.dockContainer} glass-card`}
+          className={styles.dockContainer}
           onMouseLeave={() => setHoverIndex(null)}
         >
           {items
@@ -148,10 +148,10 @@ export default function Dock() {
                     title={item.name}
                     style={{
                       boxShadow: glowOpacity > 0 
-                        ? `0 10px 25px color-mix(in srgb, var(--accent) ${glowOpacity * 100}%, transparent), 0 0 10px color-mix(in srgb, var(--accent) ${glowOpacity * 50}%, transparent)` 
+                        ? `0 10px 30px color-mix(in srgb, var(--accent) ${Math.min(100, glowOpacity * 250)}%, transparent), 0 0 15px color-mix(in srgb, var(--accent) ${Math.min(100, glowOpacity * 200)}%, transparent)` 
                         : undefined,
                       borderColor: glowOpacity > 0
-                        ? `color-mix(in srgb, var(--accent) ${glowOpacity * 100}%, var(--border))`
+                        ? `color-mix(in srgb, var(--accent) ${Math.min(100, glowOpacity * 250)}%, var(--border))`
                         : undefined
                     }}
                   >

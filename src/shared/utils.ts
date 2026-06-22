@@ -67,3 +67,82 @@ export function classifyDomain(domain: string): string {
 
 export function isProductive(category: string) { return PRODUCTIVE_CATEGORIES.has(category); }
 export function isDistracting(category: string) { return DISTRACTING_CATEGORIES.has(category); }
+
+export function classifyTab(
+  url: string,
+  domain: string,
+  title: string,
+  description: string,
+  ogType: string
+): string {
+  // 1. Check static map
+  const mapped = classifyDomain(domain);
+  if (mapped !== 'Other') return mapped;
+
+  const urlLower = url.toLowerCase();
+  const titleLower = title.toLowerCase();
+  const descLower = description.toLowerCase();
+  const domainLower = domain.toLowerCase();
+
+  // 2. Localhost / LAN / Files
+  if (
+    domainLower === 'localhost' ||
+    domainLower === '127.0.0.1' ||
+    domainLower.startsWith('192.168.') ||
+    domainLower.startsWith('10.') ||
+    urlLower.startsWith('file://')
+  ) {
+    return 'Development';
+  }
+
+  // 3. Check for PDF / local files
+  if (urlLower.endsWith('.pdf') || urlLower.includes('/pdf/')) {
+    return 'Education';
+  }
+
+  // 4. Check known distracting apps (e.g. messaging / social / entertainment)
+  const distractingKeywords = [
+    'telegram.org', 'web.telegram.org', 'whatsapp.com', 'web.whatsapp.com',
+    'discord.com', 'slack.com', 'teams.microsoft.com', 'messenger.com',
+    'instagram.com', 'facebook.com', 'twitter.com', 'x.com', 'tiktok.com',
+    'reddit.com', 'youtube.com', 'netflix.com', 'primevideo.com', 'twitch.tv',
+    'spotify.com', 'pinterest.com', 'tumblr.com', 'quora.com'
+  ];
+  for (const kw of distractingKeywords) {
+    if (domainLower.includes(kw)) {
+      return 'Social';
+    }
+  }
+
+  // 5. ogType logic
+  if (ogType) {
+    if (ogType.startsWith('video') || ogType.includes('movie') || ogType.includes('game')) {
+      return 'Entertainment';
+    }
+    if (ogType === 'article' || ogType === 'book') {
+      return 'Education';
+    }
+  }
+
+  // 6. Keywords in Description or Title
+  const productiveKeywords = [
+    'study', 'learn', 'education', 'tutorial', 'course', 'document', 'research',
+    'development', 'programming', 'coding', 'api docs', 'documentation', 'github',
+    'compiler', 'science', 'math', 'academic', 'lecture', 'exercise', 'practice'
+  ];
+  for (const kw of productiveKeywords) {
+    if (descLower.includes(kw) || titleLower.includes(kw)) {
+      return 'Education';
+    }
+  }
+
+  const movieKeywords = ['movie', 'watch online', 'stream', 'game', 'play', 'episodes', 'series'];
+  for (const kw of movieKeywords) {
+    if (descLower.includes(kw) || titleLower.includes(kw)) {
+      return 'Entertainment';
+    }
+  }
+
+  return 'Other';
+}
+

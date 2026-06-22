@@ -3,93 +3,196 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { FocusSession } from '../../shared/types';
 import FocusGlance from './FocusGlance';
 import SecurityGlance from './SecurityGlance';
-import styles from './SidePanel.module.css';
 
 interface Props {
   container: HTMLDivElement;
 }
 
+const TRIGGER_ZONE_PX = 25;  // px from right edge that opens the panel
+const CLOSE_ZONE_PX = 320; // px from right edge — beyond this, start close timer
+
 export default function SidePanel({ container }: Props) {
   const [currentSession, setCurrentSession] = useState<FocusSession | null>(null);
   const [currentOrigin, setCurrentOrigin] = useState('');
   const [open, setOpen] = useState(false);
-  const leaveTimeout = useRef<number | null>(null);
 
-  // Read focus session directly from chrome.storage
+  // useRef so the mousemove listener always reads the current value
+  // without needing to re-register on every state change
+  const openRef = useRef(false);
+  const leaveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Keep ref in sync
   useEffect(() => {
-    setCurrentOrigin(window.location.origin);
+    openRef.current = open;
+  }, [open]);
 
-    const readSession = () => {
-      chrome.storage.local.get('ex1:currentSession', (result) => {
-        setCurrentSession((result['ex1:currentSession'] as FocusSession) ?? null);
-      });
-    };
-    readSession();
-
-    // Subscribe to storage changes
-    const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
-      if ('ex1:currentSession' in changes) {
-        setCurrentSession((changes['ex1:currentSession'].newValue as FocusSession) ?? null);
-      }
-    };
-    chrome.storage.onChanged.addListener(listener);
-    return () => chrome.storage.onChanged.removeListener(listener);
-  }, []);
-
-  // Sync container width based on open state
+  // ── Force container to the RIGHT side once, on mount ──────────────────
   useEffect(() => {
-    if (container) {
-      container.style.width = open ? '300px' : '15px';
+    Object.assign(container.style, {
+      position: 'fixed',
+      top: '0',
+      right: '0',
+      left: 'auto',       // override any leftover left:0 from the AI wheel setup
+      height: '100vh',
+      width: '6px',
+      zIndex: '2147483647',
+      pointerEvents: 'none',
+      background: 'transparent',
+      overflow: 'visible',
+    });
+  }, [container]);
+
+  // ── Sync container size + hit-test when open state changes ────────────
+  useEffect(() => {
+    if (open) {
+      container.style.width = '300px';
+      container.style.pointerEvents = 'all';
+    } else {
+      container.style.width = '6px';
+      container.style.pointerEvents = 'none';
     }
   }, [open, container]);
 
-  const handleMouseEnter = () => {
-    if (leaveTimeout.current) {
-      clearTimeout(leaveTimeout.current);
-      leaveTimeout.current = null;
-    }
-    setOpen(true);
-  };
+  // ── Focus session from storage ─────────────────────────────────────────
+  useEffect(() => {
+    setCurrentOrigin(window.location.origin);
 
-  const handleMouseLeave = () => {
-    leaveTimeout.current = window.setTimeout(() => {
-      setOpen(false);
-    }, 600);
-  };
+    const read = () =>
+      chrome.storage.local.get('ex1:currentSession', (res) =>
+        setCurrentSession((res['ex1:currentSession'] as FocusSession) ?? null)
+      );
+    read();
+
+    const onChange = (changes: Record<string, chrome.storage.StorageChange>) => {
+      if ('ex1:currentSession' in changes)
+        setCurrentSession((changes['ex1:currentSession'].newValue as FocusSession) ?? null);
+    };
+    chrome.storage.onChanged.addListener(onChange);
+    return () => chrome.storage.onChanged.removeListener(onChange);
+  }, []);
+
+  // ── Mouse tracking — registered ONCE, reads state via ref ────────────
+  useEffect(() => {
+    const clearClose = () => {
+      if (leaveTimeout.current) {
+        clearTimeout(leaveTimeout.current);
+        leaveTimeout.current = null;
+      }
+    };
+
+    const scheduleClose = () => {
+      if (!leaveTimeout.current) {
+        leaveTimeout.current = setTimeout(() => {
+          setOpen(false);
+          leaveTimeout.current = null;
+        }, 500);
+      }
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+      const distFromRight = window.innerWidth - e.clientX;
+
+      if (!openRef.current) {
+        // Trigger: mouse enters the right-edge zone
+        if (distFromRight <= TRIGGER_ZONE_PX) {
+          clearClose();
+          setOpen(true);
+        }
+      } else {
+        // Close: mouse has moved past the left edge of the panel
+        if (distFromRight > CLOSE_ZONE_PX) {
+          scheduleClose();
+        } else {
+          // Mouse came back into the panel — cancel pending close
+          clearClose();
+        }
+      }
+    };
+
+    const onMouseLeave = () => {
+      // Mouse left the browser window entirely
+      if (openRef.current) scheduleClose();
+    };
+
+    // capture: true so we see events even if the host page calls stopPropagation
+    // passive: true so we never block scrolling
+    window.addEventListener('mousemove', onMouseMove, { capture: true, passive: true });
+    document.addEventListener('mouseleave', onMouseLeave);
+
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove, { capture: true });
+      document.removeEventListener('mouseleave', onMouseLeave);
+      clearClose();
+    };
+  }, []); // ← empty — safe because we use openRef, not open
 
   return (
-    <div className={styles.hostWrapper} onMouseLeave={handleMouseLeave}>
-      {/* Edge trigger strip — hidden when panel is open */}
-      <div
-        className={`${styles.triggerStrip} ${open ? styles.triggerStripHidden : ''}`}
-        onMouseEnter={handleMouseEnter}
-      />
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+
+      {/* Subtle edge glow — visible when panel is closed, guides the eye */}
+      {!open && (
+        <div style={{
+          position: 'absolute',
+          right: 0,
+          top: 0,
+          width: '1px',
+          height: '100%',
+          background: 'linear-gradient(to bottom, transparent 10%, rgba(255,255,255,0.06) 50%, transparent 90%)',
+          pointerEvents: 'none',
+        }} />
+      )}
 
       <AnimatePresence>
         {open && (
           <motion.div
-            className={styles.panelContainer}
-            initial={{ x: '-100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '-100%' }}
-            transition={{ type: 'spring', stiffness: 280, damping: 28 }}
-            onMouseEnter={handleMouseEnter}
+            key="side-panel"
+            initial={{ x: '100%', opacity: 0.6 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '100%', opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            style={{
+              position: 'absolute',
+              top: 0,
+              right: 0,
+              width: '300px',
+              height: '100vh',
+              display: 'flex',
+              flexDirection: 'column',
+              background: 'rgba(10, 10, 12, 0.94)',
+              backdropFilter: 'blur(24px)',
+              WebkitBackdropFilter: 'blur(24px)',
+              borderLeft: '1px solid rgba(255,255,255,0.07)',
+              overflow: 'hidden',
+            }}
           >
-            {/* Focus timer — top half */}
-            <div className={styles.topHalf}>
+            {/* ── Top half: Focus timer ── */}
+            <div style={{ flex: 1, padding: '20px 16px 12px', overflow: 'hidden' }}>
               <FocusGlance session={currentSession} />
             </div>
 
-            {/* Divider */}
-            <div className={styles.divider} />
+            {/* ── Divider ── */}
+            <div style={{
+              height: '1px',
+              margin: '0 16px',
+              flexShrink: 0,
+              background: 'rgba(255,255,255,0.06)',
+            }} />
 
-            {/* Security scan — bottom half */}
-            <div className={styles.bottomHalf}>
+            {/* ── Bottom half: Security ── */}
+            <div style={{ flex: 1, padding: '12px 16px 20px', overflow: 'hidden' }}>
               <SecurityGlance origin={currentOrigin} />
             </div>
 
-            {/* Glowing right edge */}
-            <div className={styles.activeBorderLine} />
+            {/* Accent line on the left border */}
+            <div style={{
+              position: 'absolute',
+              left: 0,
+              top: '20%',
+              height: '60%',
+              width: '1px',
+              background: 'linear-gradient(to bottom, transparent, var(--ex1-accent, #2452FF), transparent)',
+              pointerEvents: 'none',
+            }} />
           </motion.div>
         )}
       </AnimatePresence>

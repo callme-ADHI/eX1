@@ -69,3 +69,23 @@
   --accent-muted: rgba(124, 92, 255, 0.15);
   --accent-glow:  rgba(124, 92, 255, 0.08);
 }
+[data-theme="cyber-aqua"] {
+  --accent:       #00FFD2;
+  --accent-muted: rgba(0, 255, 210, 0.15);
+  --accent-glow:  rgba(0, 255, 210, 0.08);
+}
+[data-theme="neon-tokyo"] {
+  --accent:       #FF007F;
+  --accent-muted: rgba(255, 0, 127, 0.15);
+  --accent-glow:  rgba(255, 0, 127, 0.08);
+}
+[data-theme="solar-flare"] {
+  --accent:       #FF5E00;
+  --accent-muted: rgba(255, 94, 0, 0.15);
+  --accent-glow:  rgba(255, 94, 0, 0.08);
+}
+[data-theme="electric-violet"] {
+  --accent:       #8B5CF6;
+  --accent-muted: rgba(139, 92, 246, 0.15);
+  --accent-glow:  rgba(139, 92, 246, 0.08);
+}

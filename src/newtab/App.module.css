@@ -46,18 +46,22 @@
   z-index: 20;
 }
 
-/* Productivity + Tab cards: stacked directly under search bar, keeping compact width */
-.cardsArea {
+/* Productivity + Tab cards: side by side under search bar */
+.subSearchRow {
   position: absolute;
   right: 48px;
-  top: 110px;
-  width: 460px;
-  bottom: 108px;
+  top: 108px;
+  width: 58vw;
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-  overflow: hidden;
+  flex-direction: row;
+  gap: 16px;
   z-index: 10;
+  align-items: flex-start;
+}
+
+.subSearchRow > * {
+  flex: 1;
+  min-width: 0;
 }
 
 /* ─── Settings gear bottom-right ─────────────────────────────────────────── */
