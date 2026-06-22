@@ -63,10 +63,11 @@ export default function TabIntelCard() {
     return `${s}s`;
   };
 
-  const getSecurityVerdict = (domain: string) => {
+  const getSecurityVerdict = (domain: string): string => {
     if (!securityCache) return 'Unknown';
     const match = securityCache[`https://${domain}`] || securityCache[`http://${domain}`] || securityCache[domain];
-    return match ? match.verdict : 'Unknown';
+    if (!match) return 'Unknown';
+    return match.verdict || match.riskLevel || 'Unknown';
   };
 
   const getVerdictClass = (verdict: string) => {

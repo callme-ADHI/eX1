@@ -30,10 +30,10 @@ export default function SidePanel({ container }: Props) {
   useEffect(() => {
     container.style.setProperty('position', 'fixed', 'important');
     container.style.setProperty('top', '0', 'important');
+    container.style.setProperty('bottom', '0', 'important');
     container.style.setProperty('right', '0', 'important');
     container.style.setProperty('left', 'auto', 'important');
-    container.style.setProperty('height', '100vh', 'important');
-    container.style.setProperty('width', '8px', 'important');
+    container.style.setProperty('width', '20px', 'important');
     container.style.setProperty('z-index', '2147483647', 'important');
     container.style.setProperty('pointer-events', 'auto', 'important');
     container.style.setProperty('background', 'transparent', 'important');
@@ -46,7 +46,7 @@ export default function SidePanel({ container }: Props) {
       container.style.setProperty('width', '300px', 'important');
       container.style.setProperty('pointer-events', 'auto', 'important');
     } else {
-      container.style.setProperty('width', '8px', 'important');
+      container.style.setProperty('width', '20px', 'important');
       container.style.setProperty('pointer-events', 'auto', 'important');
     }
   }, [open, container]);
@@ -119,12 +119,20 @@ export default function SidePanel({ container }: Props) {
       }
     };
 
+    const onContainerLeave = () => {
+      if (openRef.current) {
+        scheduleClose();
+      }
+    };
+
     container.addEventListener('mouseenter', onContainerEnter);
+    container.addEventListener('mouseleave', onContainerLeave);
     window.addEventListener('mousemove', onMouseMove, { capture: true, passive: true });
     document.addEventListener('mouseleave', onMouseLeave);
 
     return () => {
       container.removeEventListener('mouseenter', onContainerEnter);
+      container.removeEventListener('mouseleave', onContainerLeave);
       window.removeEventListener('mousemove', onMouseMove, { capture: true });
       document.removeEventListener('mouseleave', onMouseLeave);
       clearClose();

@@ -20,8 +20,8 @@ function init() {
   container.style.setProperty('position', 'fixed', 'important');
   container.style.setProperty('right', '0', 'important');
   container.style.setProperty('top', '0', 'important');
-  container.style.setProperty('height', '100vh', 'important');
-  container.style.setProperty('width', '8px', 'important');
+  container.style.setProperty('bottom', '0', 'important');
+  container.style.setProperty('width', '20px', 'important');
   container.style.setProperty('z-index', '2147483647', 'important');
   container.style.setProperty('pointer-events', 'auto', 'important');
   container.style.setProperty('background', 'transparent', 'important');
