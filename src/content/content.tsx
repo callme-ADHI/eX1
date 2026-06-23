@@ -15,6 +15,9 @@ function init() {
     return;
   }
 
+  // Prevent multiple injections
+  if (document.getElementById('ex1-hud-sidepanel-root')) return;
+
   const container = document.createElement('div');
   container.id = 'ex1-hud-sidepanel-root';
   container.style.setProperty('position', 'fixed', 'important');
@@ -26,6 +29,25 @@ function init() {
   container.style.setProperty('pointer-events', 'auto', 'important');
   container.style.setProperty('background', 'transparent', 'important');
   container.style.setProperty('display', 'block', 'important');
+
+  // Self-healing injection function
+  const inject = () => {
+    const parent = document.body || document.documentElement;
+    if (parent) {
+      if (parent === document.body && container.parentElement === document.documentElement) {
+        try {
+          document.documentElement.removeChild(container);
+        } catch (e) {
+          // ignore
+        }
+      }
+      if (!parent.contains(container)) {
+        parent.appendChild(container);
+      }
+    }
+  };
+
+  inject();
 
   const shadowRoot = container.attachShadow({ mode: 'open' });
 
@@ -53,14 +75,18 @@ function init() {
   mountPoint.style.height = '100%';
   shadowRoot.appendChild(mountPoint);
 
-  document.documentElement.appendChild(container);
-
   const reactRoot = createRoot(mountPoint);
   reactRoot.render(
     <React.StrictMode>
       <SidePanel container={container} />
     </React.StrictMode>
   );
+
+  // Setup MutationObserver to restore container if deleted by SPA scripts
+  const observer = new MutationObserver(() => {
+    inject();
+  });
+  observer.observe(document.documentElement, { childList: true, subtree: true });
 
   // Start tracking page API usage & permissions
   startTracker();
