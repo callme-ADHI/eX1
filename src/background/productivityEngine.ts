@@ -75,13 +75,31 @@ async function computeRollup(period: 'daily' | 'weekly'): Promise<void> {
   const totalFocusMs = completedSessions.reduce((acc, s) => acc + s.durationMinutes * 60_000, 0);
   const distractionAttempts = periodSessions.reduce((acc, s) => acc + s.distractionAttempts, 0);
 
-  // Tab usage stats
-  const tabs = snapshot?.tabs ?? [];
+  // Tab usage stats from persistent history
   let productiveMs = 0, neutralMs = 0, distractingMs = 0;
-  for (const t of tabs) {
-    if (isProductive(t.category)) productiveMs += t.activeDurationMs;
-    else if (isDistracting(t.category)) distractingMs += t.activeDurationMs;
-    else neutralMs += t.activeDurationMs;
+  try {
+    const history = (await storageGet<Record<string, { productiveMs: number; neutralMs: number; distractingMs: number }>>('ex1:productivity_history')) ?? {};
+    const datesToSum: string[] = [];
+    if (period === 'daily') {
+      const today = new Date().toISOString().split('T')[0];
+      datesToSum.push(today);
+    } else {
+      // Last 7 days
+      for (let i = 0; i < 7; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        datesToSum.push(d.toISOString().split('T')[0]);
+      }
+    }
+    for (const dateKey of datesToSum) {
+      if (history[dateKey]) {
+        productiveMs += history[dateKey].productiveMs || 0;
+        neutralMs += history[dateKey].neutralMs || 0;
+        distractingMs += history[dateKey].distractingMs || 0;
+      }
+    }
+  } catch (err) {
+    console.error('[productivityEngine] error reading productivity history:', err);
   }
 
   // Task stats

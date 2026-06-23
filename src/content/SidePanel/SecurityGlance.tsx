@@ -42,7 +42,7 @@ const blockBar = (score: number) => {
 
 export default function SecurityGlance({ origin }: Props) {
   const [report, setReport] = useState<SecurityReport | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(origin ? origin.startsWith('http') : false);
   const [error, setError] = useState('');
   
   const [permissions, setPermissions] = useState<Record<string, string>>({});
@@ -52,24 +52,22 @@ export default function SecurityGlance({ origin }: Props) {
   const [timelineExpanded, setTimelineExpanded] = useState(false);
 
   useEffect(() => {
-    if (!origin || !origin.startsWith('http')) return;
+    if (!origin || !origin.startsWith('http')) {
+      setLoading(false);
+      setReport(null);
+      return;
+    }
 
-    const loadReport = () => {
-      chrome.storage.local.get('security:reports', (result) => {
-        const cache = (result['security:reports'] ?? {}) as Record<string, SecurityReport>;
-        if (cache[origin]) {
-          setReport(cache[origin]);
-        }
-      });
-    };
+    setLoading(true);
+    setError('');
+    setReport(null);
 
-    loadReport();
-
-    // Query report if not found or trigger scan
     chrome.storage.local.get('security:reports', (result) => {
       const cache = (result['security:reports'] ?? {}) as Record<string, SecurityReport>;
-      if (!cache[origin]) {
-        setLoading(true);
+      if (cache[origin]) {
+        setReport(cache[origin]);
+        setLoading(false);
+      } else {
         chrome.runtime.sendMessage(
           { type: 'REQUEST_SECURITY_REPORT', origin },
           (response) => {

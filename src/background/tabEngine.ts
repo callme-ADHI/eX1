@@ -1,6 +1,6 @@
 import { storageGet, storageSet, KEYS } from '../shared/storage';
 import type { TabRecord, TabSnapshot } from '../shared/types';
-import { extractDomain, classifyDomain, classifyTab } from '../shared/utils';
+import { extractDomain, classifyDomain, classifyTab, isProductive, isDistracting } from '../shared/utils';
 import { computeAllRollups } from './productivityEngine';
 
 // ─── In-memory tab store ──────────────────────────────────────────────────────
@@ -226,10 +226,14 @@ function flushActiveTime() {
   if (activeTabId === null) return;
   const record = tabStore.get(activeTabId);
   if (record) {
-    tabStore.set(activeTabId, {
-      ...record,
-      activeDurationMs: record.activeDurationMs + (Date.now() - activeTabStart),
-    });
+    const elapsed = Date.now() - activeTabStart;
+    if (elapsed > 0) {
+      tabStore.set(activeTabId, {
+        ...record,
+        activeDurationMs: record.activeDurationMs + elapsed,
+      });
+      logProductivityTime(record.category, elapsed);
+    }
   }
   activeTabStart = Date.now();
 }
@@ -260,3 +264,29 @@ export function updateTabMeta(tabId: number, meta: {
 }
 
 export { tabStore };
+
+async function logProductivityTime(category: string, durationMs: number) {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const history = (await storageGet<Record<string, { productiveMs: number; neutralMs: number; distractingMs: number }>>('ex1:productivity_history')) ?? {};
+    if (!history[today]) {
+      history[today] = { productiveMs: 0, neutralMs: 0, distractingMs: 0 };
+    }
+    if (isProductive(category)) {
+      history[today].productiveMs += durationMs;
+    } else if (isDistracting(category)) {
+      history[today].distractingMs += durationMs;
+    } else {
+      history[today].neutralMs += durationMs;
+    }
+    const dates = Object.keys(history).sort();
+    if (dates.length > 14) {
+      for (const d of dates.slice(0, dates.length - 14)) {
+        delete history[d];
+      }
+    }
+    await storageSet('ex1:productivity_history', history);
+  } catch (err) {
+    console.error('[tabEngine] failed to log productivity time:', err);
+  }
+}

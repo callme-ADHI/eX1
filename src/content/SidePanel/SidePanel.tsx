@@ -14,7 +14,9 @@ const CLOSE_ZONE_PX = 320; // px from right edge — beyond this, start close ti
 
 export default function SidePanel({ container }: Props) {
   const [currentSession, setCurrentSession] = useState<FocusSession | null>(null);
-  const [currentOrigin, setCurrentOrigin] = useState('');
+  const [currentOrigin, setCurrentOrigin] = useState(() => {
+    try { return window.location.origin; } catch { return ''; }
+  });
   const [open, setOpen] = useState(false);
 
   // useRef so the mousemove listener always reads the current value
