@@ -67,6 +67,20 @@ async function handleMessage(msg: Message, sender: chrome.runtime.MessageSender)
             clipboard: 'unknown',
             popups: 'unknown',
           },
+          historyTimeline: [],
+          fingerprint: {
+            category: 'Unknown',
+            trustLevel: 'Medium',
+            securityScore: 50,
+            privacyScore: 50,
+            domainMaturity: 'New',
+            popularity: 'Low',
+            trafficConfidence: 'Low',
+            riskLevel: 'Medium Risk',
+            primaryRegion: 'Unknown',
+            hostingType: 'Unknown',
+            techStack: [],
+          },
           generatedAt: Date.now(),
         };
         existingReport.permissions = {

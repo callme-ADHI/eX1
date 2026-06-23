@@ -75,10 +75,36 @@ export interface SecurityReport {
   safetyIndex: number;
   verdict: 'Safe' | 'Medium Risk' | 'High Risk';
   
+  // NEW: Advanced cybersecurity intelligence modules
+  historyTimeline: HistoryEvent[];
+  fingerprint: WebsiteFingerprint;
+
   // Legacy support compatibility
   riskLevel?: RiskLevel;
   resolvedIp?: string;
   hostingLocation?: string;
+}
+
+export interface HistoryEvent {
+  timestamp: string; // e.g. "Dec 2022" or ISO string
+  type: string;      // e.g. "Domain Registered", "Certificate Renewed"
+  description: string;
+  confidence: 'Low' | 'Medium' | 'High';
+  classification: 'Green' | 'Yellow' | 'Red';
+}
+
+export interface WebsiteFingerprint {
+  category: string;
+  trustLevel: 'Very High' | 'High' | 'Medium' | 'Low' | 'Critical';
+  securityScore: number;
+  privacyScore: number;
+  domainMaturity: 'New' | 'Growing' | 'Established' | 'Mature' | 'Legacy';
+  popularity: 'High' | 'Medium' | 'Low';
+  trafficConfidence: 'High' | 'Medium' | 'Low';
+  riskLevel: 'Safe' | 'Low Risk' | 'Medium Risk' | 'High Risk' | 'Dangerous';
+  primaryRegion: string;
+  hostingType: string;
+  techStack: string[];
 }
 
 export interface TabEntry {

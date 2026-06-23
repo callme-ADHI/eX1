@@ -49,6 +49,7 @@ export default function SecurityGlance({ origin }: Props) {
   const [cameraActive, setCameraActive] = useState(false);
   const [micActive, setMicActive] = useState(false);
   const [showNameservers, setShowNameservers] = useState(false);
+  const [timelineExpanded, setTimelineExpanded] = useState(false);
 
   useEffect(() => {
     if (!origin || !origin.startsWith('http')) return;
@@ -296,6 +297,133 @@ export default function SecurityGlance({ origin }: Props) {
                   )}
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Domain History Timeline */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em' }}>DOMAIN HISTORY TIMELINE</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingLeft: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)', marginTop: '4px' }}>
+              {(() => {
+                const timelineEvents = report.historyTimeline || [];
+                if (timelineEvents.length === 0) {
+                  return <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px' }}>No timeline data available</span>;
+                }
+                const visibleEvents = timelineExpanded ? timelineEvents : timelineEvents.slice(0, 3);
+                return (
+                  <>
+                    {visibleEvents.map((event, idx) => (
+                      <div key={idx} style={{ position: 'relative', paddingLeft: '12px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        {/* Circle indicator */}
+                        <div style={{
+                          position: 'absolute',
+                          left: '-4px',
+                          top: '4px',
+                          width: '7px',
+                          height: '7px',
+                          borderRadius: '50%',
+                          background: event.classification === 'Green' ? '#22c55e' : event.classification === 'Yellow' ? '#f59e0b' : '#ef4444',
+                          boxShadow: `0 0 6px ${event.classification === 'Green' ? '#22c55e' : event.classification === 'Yellow' ? '#f59e0b' : '#ef4444'}`
+                        }} />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontWeight: 600, color: '#fff', fontSize: '10px' }}>{event.type.toUpperCase()}</span>
+                          <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace' }}>{event.timestamp}</span>
+                        </div>
+                        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '9.5px', lineHeight: '1.2' }}>{event.description}</span>
+                        <div style={{ display: 'flex', gap: '4px', fontSize: '8.5px', color: 'rgba(255,255,255,0.4)' }}>
+                          <span>CONFIDENCE:</span>
+                          <span style={{ fontWeight: 700, color: event.confidence === 'High' ? '#22c55e' : event.confidence === 'Medium' ? '#f59e0b' : '#ef4444' }}>{event.confidence.toUpperCase()}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {timelineEvents.length > 3 && (
+                      <button 
+                        onClick={() => setTimelineExpanded(!timelineExpanded)} 
+                        style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent)', cursor: 'pointer', fontSize: '9px', fontWeight: 600, marginTop: '4px', textAlign: 'left' }}
+                      >
+                        {timelineExpanded ? '▲ SHOW LESS EVENTS' : `▶ SHOW ALL EVENTS (+${timelineEvents.length - 3} more)`}
+                      </button>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+
+          {/* Website Fingerprint */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em' }}>WEBSITE FINGERPRINT</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)', marginTop: '4px' }}>
+              {(() => {
+                const fp = report.fingerprint || {
+                  category: 'Unknown',
+                  trustLevel: 'Medium',
+                  securityScore: 50,
+                  privacyScore: 50,
+                  domainMaturity: 'New',
+                  popularity: 'Low',
+                  trafficConfidence: 'Low',
+                  riskLevel: 'Medium Risk',
+                  primaryRegion: 'Unknown',
+                  hostingType: 'Unknown',
+                  techStack: []
+                };
+
+                const getRiskColor = (risk: string) => {
+                  if (risk === 'Safe') return '#22c55e';
+                  if (risk === 'Low Risk') return '#4ade80';
+                  if (risk === 'Medium Risk') return '#f59e0b';
+                  if (risk === 'High Risk' || risk === 'Dangerous') return '#ef4444';
+                  return 'rgba(255,255,255,0.6)';
+                };
+
+                return (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.4)' }}>CATEGORY</span>
+                      <span style={{ fontWeight: 600, color: '#fff' }}>{fp.category}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.4)' }}>TRUST LEVEL</span>
+                      <span style={{ fontWeight: 700, color: fp.trustLevel === 'Very High' || fp.trustLevel === 'High' ? '#22c55e' : fp.trustLevel === 'Medium' ? '#f59e0b' : '#ef4444' }}>
+                        {fp.trustLevel.toUpperCase()}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.4)' }}>SECURITY / PRIVACY SCORE</span>
+                      <span style={{ fontFamily: 'monospace' }}>
+                        <span style={{ color: scoreColor(fp.securityScore) }}>S:{fp.securityScore}</span>
+                        <span style={{ color: 'rgba(255,255,255,0.3)', margin: '0 4px' }}>|</span>
+                        <span style={{ color: scoreColor(fp.privacyScore) }}>P:{fp.privacyScore}</span>
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.4)' }}>MATURITY / POPULARITY</span>
+                      <span>{fp.domainMaturity} · {fp.popularity} Pop</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.4)' }}>RISK LEVEL</span>
+                      <span style={{ fontWeight: 700, color: getRiskColor(fp.riskLevel) }}>{fp.riskLevel.toUpperCase()}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.4)' }}>REGION / HOSTING</span>
+                      <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '170px' }}>
+                        {fp.primaryRegion} ({fp.hostingType})
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginTop: '4px' }}>
+                      <span style={{ fontSize: '8.5px', color: 'rgba(255,255,255,0.3)', fontWeight: 600 }}>TECHNOLOGY STACK</span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {fp.techStack.map((tech, idx) => (
+                          <span key={idx} style={{ fontSize: '8.5px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.8)', padding: '1px 5px', borderRadius: '3px', fontWeight: 500 }}>
+                            {tech}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
 
