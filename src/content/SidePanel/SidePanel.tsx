@@ -210,7 +210,7 @@ export default function SidePanel({ container }: Props) {
               fontFamily: "'Inter', 'IBM Plex Mono', system-ui, sans-serif",
             }}
           >
-            {/* ── Top half: Focus timer ── */}
+            {/* ── Top half: Focus timer (1/4 height) ── */}
             <div style={{ flex: 1, padding: '20px 16px 12px', overflowY: 'auto' }}>
               <FocusGlance session={currentSession} />
             </div>
@@ -223,8 +223,8 @@ export default function SidePanel({ container }: Props) {
               background: 'rgba(255,255,255,0.06)',
             }} />
 
-            {/* ── Bottom half: Security ── */}
-            <div style={{ flex: 1, padding: '12px 16px 20px', overflowY: 'auto' }}>
+            {/* ── Bottom half: Security (3/4 height) ── */}
+            <div style={{ flex: 3, padding: '12px 16px 20px', overflowY: 'auto' }}>
               <SecurityGlance origin={currentOrigin} />
             </div>
 
