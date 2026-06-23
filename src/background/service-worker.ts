@@ -51,44 +51,10 @@ async function handleMessage(msg: Message, sender: chrome.runtime.MessageSender)
       }
       if (msg.type === 'PAGE_META' && msg.origin && msg.permissions) {
         const cache = (await storageGet<Record<string, any>>(KEYS.SECURITY_CACHE)) ?? {};
-        const existingReport = cache[msg.origin] ?? {
-          origin: msg.origin,
-          riskLevel: 'Safe',
-          domainAgeDays: null,
-          https: msg.origin.startsWith('https://'),
-          certIssuer: null,
-          certExpiresAt: null,
-          flags: [],
-          permissions: {
-            camera: 'unknown',
-            microphone: 'unknown',
-            geolocation: 'unknown',
-            notifications: 'unknown',
-            clipboard: 'unknown',
-            popups: 'unknown',
-          },
-          historyTimeline: [],
-          fingerprint: {
-            category: 'Unknown',
-            trustLevel: 'Medium',
-            securityScore: 50,
-            privacyScore: 50,
-            domainMaturity: 'New',
-            popularity: 'Low',
-            trafficConfidence: 'Low',
-            riskLevel: 'Medium Risk',
-            primaryRegion: 'Unknown',
-            hostingType: 'Unknown',
-            techStack: [],
-          },
-          generatedAt: Date.now(),
-        };
-        existingReport.permissions = {
-          ...existingReport.permissions,
-          ...msg.permissions
-        };
-        cache[msg.origin] = existingReport;
-        await storageSet(KEYS.SECURITY_CACHE, cache);
+        if (cache[msg.origin]) {
+          cache[msg.origin].permissions = msg.permissions;
+          await storageSet(KEYS.SECURITY_CACHE, cache);
+        }
       }
       return;
     }

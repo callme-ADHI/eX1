@@ -33,6 +33,13 @@
       "js": ["content.js"],
       "run_at": "document_end",
       "all_frames": false
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["tracker.js"],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": false
     }
   ],
   "content_security_policy": {

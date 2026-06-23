@@ -98,56 +98,31 @@ let cameraAccessCount = 0;
 let micAccessCount = 0;
 let fetchCount = 0;
 
-function injectMainWorldTracker() {
-  const code = `
-    (() => {
-      let cameraCount = 0;
-      let micCount = 0;
-      let fetchCount = 0;
+function startTracker() {
+  if (!window.location.protocol.startsWith('http')) return;
 
-      const reportAccess = () => {
-        window.dispatchEvent(new CustomEvent('ex1:api_access', {
-          detail: { cameraCount, micCount, fetchCount }
-        }));
-      };
+  window.addEventListener('ex1:api_access', (e: any) => {
+    const detail = e.detail;
+    if (detail) {
+      cameraAccessCount = detail.cameraCount;
+      micAccessCount = detail.micCount;
+      fetchCount = detail.fetchCount;
+      sendPageMeta();
+    }
+  });
 
-      // Intercept getUserMedia
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const origGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
-        navigator.mediaDevices.getUserMedia = async function(constraints) {
-          if (constraints) {
-            if (constraints.video) cameraCount++;
-            if (constraints.audio) micCount++;
-            reportAccess();
-          }
-          return origGetUserMedia(constraints);
-        };
-      }
+  sendPageMeta();
 
-      // Intercept fetch
-      const origFetch = window.fetch;
-      window.fetch = async function(...args) {
-        fetchCount++;
-        reportAccess();
-        return origFetch.apply(this, args);
-      };
-
-      // Intercept XHR
-      const origOpen = XMLHttpRequest.prototype.open;
-      XMLHttpRequest.prototype.open = function(...args) {
-        fetchCount++;
-        reportAccess();
-        return origOpen.apply(this, args);
-      };
-    })();
-  `;
-  try {
-    const script = document.createElement('script');
-    script.textContent = code;
-    (document.head || document.documentElement).appendChild(script);
-    script.remove();
-  } catch (e) {
-    console.error('[eX1] Main world tracker injection failed:', e);
+  const titleEl = document.querySelector('title');
+  if (titleEl) {
+    const observer = new MutationObserver(() => {
+      sendPageMeta();
+    });
+    observer.observe(titleEl, {
+      subtree: true,
+      childList: true,
+      characterData: true
+    });
   }
 }
 
@@ -197,36 +172,6 @@ async function sendPageMeta() {
     fetchCount,
     permissions: perms
   });
-}
-
-function startTracker() {
-  if (!window.location.protocol.startsWith('http')) return;
-
-  injectMainWorldTracker();
-
-  window.addEventListener('ex1:api_access', (e: any) => {
-    const detail = e.detail;
-    if (detail) {
-      cameraAccessCount = detail.cameraCount;
-      micAccessCount = detail.micCount;
-      fetchCount = detail.fetchCount;
-      sendPageMeta();
-    }
-  });
-
-  sendPageMeta();
-
-  const titleEl = document.querySelector('title');
-  if (titleEl) {
-    const observer = new MutationObserver(() => {
-      sendPageMeta();
-    });
-    observer.observe(titleEl, {
-      subtree: true,
-      childList: true,
-      characterData: true
-    });
-  }
 }
 
 // Wait for document to be ready
