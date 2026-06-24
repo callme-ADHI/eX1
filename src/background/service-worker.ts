@@ -1,3 +1,18 @@
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
+ *  eX1 Security Extension Panel
+ *  Copyright (c) Aevoarx. All rights reserved.
+ *  
+ *  Brand: Aevoarx
+ *  Product: eX1 Suite
+ *  Website: https://aevoarx.com
+ *  
+ *  This software contains proprietary designs and cyber intelligence engines
+ *  developed by Aevoarx. Unauthorized copying, modification, or distribution
+ *  of this file, via any medium, is strictly prohibited.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
 import { storageGet, storageSet, KEYS } from '../shared/storage';
 import { DEFAULT_AI_TOOLS, DEFAULT_DOCK_ITEMS, DEFAULT_SETTINGS } from '../shared/defaults';
 import { initFocusEngine, startSession, pauseSession, resumeSession, cancelSession } from './focusEngine';

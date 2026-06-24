@@ -193,6 +193,20 @@ export default function Dock() {
                   >
                     <IconRenderer icon={item.icon} name={item.name} url={item.url} />
                     {isActive && <div className={styles.activeDot} />}
+                    {hoverIndex === idx && (
+                      <button
+                        className={styles.deleteShortcutBtn}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          const updated = items.filter((t) => t.id !== item.id);
+                          setItems(updated);
+                        }}
+                        title={`Remove ${item.name}`}
+                      >
+                        ×
+                      </button>
+                    )}
                   </a>
                 </div>
               );
