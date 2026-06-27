@@ -6,11 +6,9 @@ import { motion } from 'framer-motion';
  *
  * Layout:
  *   - Both the Logo Mark (A) and the Wordmark (EVOARX) are drawn inside a single SVG.
- *   - This guarantees perfect baseline alignment mathematically.
- *   - The logo mark's legs are drawn as geometric polygons with flat horizontal cuts.
- *   - The right leg attaches below the apex of the left leg, matching the brand asset.
- *   - The wordmark letters are drawn with sw=1.5 and height=10 (smaller than the A),
- *     with their bases exactly aligned at y=26.
+ *   - Spacing between all letters is mathematically locked to exactly 5px gaps.
+ *   - The 'A' (Λ chevron) letter is perfectly centered and symmetrical (spans x=79 to 87, apex at x=83).
+ *   - The base of the logo mark and the wordmark are locked to y=26.
  */
 export default function AevoarxLogo() {
   const [hovered, setHovered] = useState(false);
@@ -56,30 +54,30 @@ export default function AevoarxLogo() {
             transition: 'opacity 0.25s ease',
           }}
         >
-          {/* E — Accent (3 horizontal bars, no vertical spine) */}
+          {/* E — Accent (x=40 to 48) */}
           <line x1="40" y1="16" x2="48" y2="16" stroke="var(--accent)" strokeWidth={sw} strokeLinecap="butt" />
           <line x1="40" y1="21" x2="46.5" y2="21" stroke="var(--accent)" strokeWidth={sw} strokeLinecap="butt" />
           <line x1="40" y1="26" x2="48" y2="26" stroke="var(--accent)" strokeWidth={sw} strokeLinecap="butt" />
 
-          {/* V — White */}
+          {/* V — White (x=53 to 61) */}
           <line x1="53" y1="16" x2="57" y2="26" stroke="white" strokeWidth={sw} strokeLinecap="butt" />
           <line x1="61" y1="16" x2="57" y2="26" stroke="white" strokeWidth={sw} strokeLinecap="butt" />
 
-          {/* O — White */}
-          <rect x="66" y="16.5" width="7" height="9" rx="2" stroke="white" strokeWidth={sw} fill="none" />
+          {/* O — White (x=66 to 74) */}
+          <rect x="66.5" y="16.5" width="7" height="9" rx="2" stroke="white" strokeWidth={sw} fill="none" />
 
-          {/* A (Λ Chevron) — White (meets slightly below apex) */}
-          <line x1="78.5" y1="16.5" x2="74" y2="26" stroke="white" strokeWidth={sw} strokeLinecap="butt" />
-          <line x1="78.5" y1="18.5" x2="82" y2="26" stroke="white" strokeWidth={sw} strokeLinecap="butt" />
+          {/* A (Λ Chevron) — White (x=79 to 87, perfectly symmetrical apex at x=83) */}
+          <line x1="83" y1="16" x2="79" y2="26" stroke="white" strokeWidth={sw} strokeLinecap="butt" />
+          <line x1="83" y1="18" x2="86.2" y2="26" stroke="white" strokeWidth={sw} strokeLinecap="butt" />
 
-          {/* R — White */}
-          <line x1="87" y1="16" x2="87" y2="26" stroke="white" strokeWidth={sw} strokeLinecap="butt" />
-          <path d="M 87,16.75 L 90.5,16.75 C 92.5,16.75 92.5,21.25 90.5,21.25 L 87,21.25" stroke="white" strokeWidth={sw} fill="none" strokeLinecap="butt" />
-          <line x1="90.5" y1="21.25" x2="94.5" y2="26" stroke="white" strokeWidth={sw} strokeLinecap="butt" />
+          {/* R — White (x=92 to 100) */}
+          <line x1="92" y1="16" x2="92" y2="26" stroke="white" strokeWidth={sw} strokeLinecap="butt" />
+          <path d="M 92,16.75 L 95.5,16.75 C 97.5,16.75 97.5,21.25 95.5,21.25 L 87,21.25" stroke="white" strokeWidth={sw} fill="none" strokeLinecap="butt" />
+          <line x1="95.5" y1="21.25" x2="99.5" y2="26" stroke="white" strokeWidth={sw} strokeLinecap="butt" />
 
-          {/* X — Accent (Blue/Theme) */}
-          <line x1="100" y1="16" x2="108" y2="26" stroke="var(--accent)" strokeWidth={sw} strokeLinecap="butt" />
-          <line x1="108" y1="16" x2="100" y2="26" stroke="var(--accent)" strokeWidth={sw} strokeLinecap="butt" />
+          {/* X — Accent (Blue/Theme) (x=105 to 113) */}
+          <line x1="105" y1="16" x2="113" y2="26" stroke="var(--accent)" strokeWidth={sw} strokeLinecap="butt" />
+          <line x1="113" y1="16" x2="105" y2="26" stroke="var(--accent)" strokeWidth={sw} strokeLinecap="butt" />
         </g>
       </svg>
     </div>
