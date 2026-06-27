@@ -9,7 +9,7 @@ import { IconRenderer } from '../IconRenderer';
 
 const THEMES: { id: ThemeId; name: string; color: string }[] = [
   { id: 'platinum',   name: 'Platinum',      color: '#E5E7EB' },
-  { id: 'sapphire',   name: 'Sapphire',      color: '#2452FF' },
+  { id: 'sapphire',   name: 'Sapphire',      color: '#1535C2' },
   { id: 'crimson',    name: 'Crimson',       color: '#C81E3A' },
   { id: 'gold',       name: 'Gold',          color: '#C9A24B' },
   { id: 'emerald',    name: 'Emerald',       color: '#166246' },
@@ -17,7 +17,7 @@ const THEMES: { id: ThemeId; name: string; color: string }[] = [
   { id: 'neon-tokyo', name: 'Neon Tokyo',    color: '#FF007F' },
   { id: 'solar-flare',name: 'Solar Flare',   color: '#FF5E00' },
   { id: 'obsidian',   name: 'Obsidian Steel',color: '#4A7FA5' },
-  { id: 'rose-gold',  name: 'Rose Gold',     color: '#B76E79' },
+  { id: 'rose-gold',  name: 'Rose Gold',     color: '#E8446A' },
 ];
 
 export default function SettingsPanel() {

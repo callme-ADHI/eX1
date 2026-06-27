@@ -45,9 +45,9 @@
   --accent-glow:  rgba(229, 231, 235, 0.06);
 }
 [data-theme="sapphire"] {
-  --accent:       #2452FF;
-  --accent-muted: rgba(36, 82, 255, 0.15);
-  --accent-glow:  rgba(36, 82, 255, 0.08);
+  --accent:       #1535C2;
+  --accent-muted: rgba(21, 53, 194, 0.18);
+  --accent-glow:  rgba(21, 53, 194, 0.10);
 }
 [data-theme="crimson"] {
   --accent:       #C81E3A;
@@ -91,7 +91,7 @@
   --accent-glow:  rgba(74, 127, 165, 0.09);
 }
 [data-theme="rose-gold"] {
-  --accent:       #B76E79;
-  --accent-muted: rgba(183, 110, 121, 0.18);
-  --accent-glow:  rgba(183, 110, 121, 0.09);
+  --accent:       #E8446A;
+  --accent-muted: rgba(232, 68, 106, 0.18);
+  --accent-glow:  rgba(232, 68, 106, 0.10);
 }
