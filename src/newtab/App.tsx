@@ -12,6 +12,7 @@ import FocusStrip from './components/FocusCard/FocusStrip';
 import ProductivityCard from './components/ProductivityCard/ProductivityCard';
 import TabIntelCard from './components/TabIntelCard/TabIntelCard';
 import SettingsPanel from './components/Settings/SettingsPanel';
+import AevoarxLogo from './components/AevoarxLogo/AevoarxLogo';
 
 import styles from './App.module.css';
 
@@ -29,8 +30,8 @@ export default function App() {
         <Clock settings={settings} />
       </div>
 
-      {/* ── Focus strip — below clock ───────────── */}
-      <div className={styles.focusArea}>
+      {/* ── Focus strip — below clock, shifted down more for analog ── */}
+      <div className={styles.focusArea} style={settings.clockStyle === 'analog' ? { marginTop: '2cm' } : undefined}>
         <FocusStrip />
       </div>
 
@@ -50,6 +51,11 @@ export default function App() {
 
       {/* ── Dock — bottom center ────────────────── */}
       <Dock />
+
+      {/* ── Brand logo — top-right corner ────────── */}
+      <div className={styles.logoArea}>
+        <AevoarxLogo />
+      </div>
 
       {/* ── Settings gear ───────────────────────── */}
       <div className={styles.settingsArea}>

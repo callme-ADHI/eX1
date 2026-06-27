@@ -8,16 +8,16 @@ import styles from './SettingsPanel.module.css';
 import { IconRenderer } from '../IconRenderer';
 
 const THEMES: { id: ThemeId; name: string; color: string }[] = [
-  { id: 'platinum', name: 'Platinum', color: '#E5E7EB' },
-  { id: 'sapphire', name: 'Sapphire', color: '#2452FF' },
-  { id: 'crimson', name: 'Crimson', color: '#C81E3A' },
-  { id: 'gold', name: 'Gold', color: '#C9A24B' },
-  { id: 'emerald', name: 'Emerald', color: '#1E8F5E' },
-  { id: 'violet', name: 'Violet', color: '#7C5CFF' },
-  { id: 'cyber-aqua', name: 'Cyber Aqua', color: '#00FFD2' },
-  { id: 'neon-tokyo', name: 'Neon Tokyo', color: '#FF007F' },
-  { id: 'solar-flare', name: 'Solar Flare', color: '#FF5E00' },
-  { id: 'electric-violet', name: 'Electric Violet', color: '#8B5CF6' },
+  { id: 'platinum',   name: 'Platinum',      color: '#E5E7EB' },
+  { id: 'sapphire',   name: 'Sapphire',      color: '#2452FF' },
+  { id: 'crimson',    name: 'Crimson',       color: '#C81E3A' },
+  { id: 'gold',       name: 'Gold',          color: '#C9A24B' },
+  { id: 'emerald',    name: 'Emerald',       color: '#166246' },
+  { id: 'violet',     name: 'Violet',        color: '#7C5CFF' },
+  { id: 'neon-tokyo', name: 'Neon Tokyo',    color: '#FF007F' },
+  { id: 'solar-flare',name: 'Solar Flare',   color: '#FF5E00' },
+  { id: 'obsidian',   name: 'Obsidian Steel',color: '#4A7FA5' },
+  { id: 'rose-gold',  name: 'Rose Gold',     color: '#B76E79' },
 ];
 
 export default function SettingsPanel() {

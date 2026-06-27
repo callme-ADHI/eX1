@@ -60,9 +60,9 @@
   --accent-glow:  rgba(201, 162, 75, 0.08);
 }
 [data-theme="emerald"] {
-  --accent:       #1E8F5E;
-  --accent-muted: rgba(30, 143, 94, 0.15);
-  --accent-glow:  rgba(30, 143, 94, 0.08);
+  --accent:       #166246;
+  --accent-muted: rgba(22, 98, 70, 0.20);
+  --accent-glow:  rgba(22, 98, 70, 0.10);
 }
 [data-theme="violet"] {
   --accent:       #7C5CFF;
@@ -84,8 +84,14 @@
   --accent-muted: rgba(255, 94, 0, 0.15);
   --accent-glow:  rgba(255, 94, 0, 0.08);
 }
-[data-theme="electric-violet"] {
-  --accent:       #8B5CF6;
-  --accent-muted: rgba(139, 92, 246, 0.15);
-  --accent-glow:  rgba(139, 92, 246, 0.08);
+/* Premium formal replacements */
+[data-theme="obsidian"] {
+  --accent:       #4A7FA5;
+  --accent-muted: rgba(74, 127, 165, 0.18);
+  --accent-glow:  rgba(74, 127, 165, 0.09);
+}
+[data-theme="rose-gold"] {
+  --accent:       #B76E79;
+  --accent-muted: rgba(183, 110, 121, 0.18);
+  --accent-glow:  rgba(183, 110, 121, 0.09);
 }

@@ -201,7 +201,7 @@ export interface DockItem {
 export type ClockStyle = "analog" | "digital";
 export type ClockMode = "12h" | "24h";
 export type AnimationSpeed = "fast" | "normal" | "slow";
-export type ThemeId = "platinum" | "sapphire" | "crimson" | "gold" | "emerald" | "violet" | "cyber-aqua" | "neon-tokyo" | "solar-flare" | "electric-violet";
+export type ThemeId = "platinum" | "sapphire" | "crimson" | "gold" | "emerald" | "violet" | "neon-tokyo" | "solar-flare" | "obsidian" | "rose-gold";
 
 export interface AppSettings {
   theme: ThemeId;

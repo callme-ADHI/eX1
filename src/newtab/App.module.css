@@ -71,3 +71,14 @@
   right: 22px;
   z-index: 800;
 }
+
+/* ─── Aevoarx brand logo — top-right corner ──────────────────────────────── */
+.logoArea {
+  position: fixed;
+  top: 18px;
+  right: 70px;
+  z-index: 800;
+  display: flex;
+  align-items: center;
+}
+
