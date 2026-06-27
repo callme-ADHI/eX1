@@ -72,7 +72,7 @@ export default function AevoarxLogo() {
 
           {/* R — White (x=92 to 100) */}
           <line x1="92" y1="16" x2="92" y2="26" stroke="white" strokeWidth={sw} strokeLinecap="butt" />
-          <path d="M 92,16.75 L 95.5,16.75 C 97.5,16.75 97.5,21.25 95.5,21.25 L 87,21.25" stroke="white" strokeWidth={sw} fill="none" strokeLinecap="butt" />
+          <path d="M 92,16.75 L 95.5,16.75 C 97.5,16.75 97.5,21.25 95.5,21.25 L 92,21.25" stroke="white" strokeWidth={sw} fill="none" strokeLinecap="butt" />
           <line x1="95.5" y1="21.25" x2="99.5" y2="26" stroke="white" strokeWidth={sw} strokeLinecap="butt" />
 
           {/* X — Accent (Blue/Theme) (x=105 to 113) */}
